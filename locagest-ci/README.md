@@ -43,6 +43,53 @@ Pour la production, ajouter le domaine déployé à la liste des redirections Su
 
 Le tableau de bord, les locataires, les baux et les paiements restent à construire. La redirection vers `/dashboard` après l’onboarding présente les premiers indicateurs du patrimoine enregistré.
 
+## Tests SQL rejouables
+
+Les règles métier et l’isolation multi-tenant sont vérifiées par des tests SQL qui
+se rejouent sur un Postgres local, sans dépendre du projet Supabase.
+
+```bash
+docker run -d --name loca_pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=locagest \
+  -p 55432:5432 postgres:17-alpine
+
+# Reproduit l'environnement Supabase (rôles, schéma auth, auth.uid())
+docker cp supabase/tests/00_local_scaffold.sql loca_pg:/tmp/f.sql
+docker exec loca_pg psql -U postgres -d locagest -v ON_ERROR_STOP=1 -f /tmp/f.sql
+
+# Puis les migrations, dans l'ordre
+for f in supabase/migrations/*.sql; do
+  docker cp "$f" loca_pg:/tmp/f.sql
+  docker exec loca_pg psql -U postgres -d locagest -v ON_ERROR_STOP=1 -f /tmp/f.sql
+done
+
+# Puis les tests : 11 règles métier, 8 contrôles d'isolation
+for f in supabase/tests/business_rules.test.sql supabase/tests/rls_isolation.test.sql; do
+  docker cp "$f" loca_pg:/tmp/f.sql
+  docker exec loca_pg psql -U postgres -d locagest -f /tmp/f.sql
+done
+```
+
+`business_rules.test.sql` vérifie le calcul du total, la bascule de statut
+`pending / partial / paid / overdue`, la bascule J+5 par `mark_overdue_rent_calls`,
+l’unicité du bail actif par lot et l’idempotence de la génération mensuelle.
+
+`rls_isolation.test.sql` prouve qu’une agence ne voit ni ne peut écrire chez une
+autre. Il encadre chaque scénario par `BEGIN` / `ROLLBACK`, car `SET LOCAL` n’a
+d’effet que dans une transaction, et récupère les identifiants via `\gset` avant de
+basculer le rôle, le rôle `authenticated` n’ayant pas le droit de lire `auth.users`.
+
+## Script de migration pour le SQL Editor
+
+`supabase/MIGRATION_2_A_COLLER.sql` est prêt à coller dans **Supabase → SQL Editor**.
+Il commence par un contrôle qui doit renvoyer `2` (migration 1 déjà appliquée) et se
+termine par une vérification qui doit renvoyer `9 | 33 | 14`. Le fichier est
+généré depuis la migration versionnée, qui reste la source de vérité :
+
+```bash
+python3 scripts/build_migration_script.py
+```
+
+
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.

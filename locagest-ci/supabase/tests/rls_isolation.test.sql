@@ -8,6 +8,13 @@
 -- authenticated n a pas le droit de lire auth.users. La valeur est recuperee
 -- dans une variable psql, qui reste cote client et non en base.
 
+-- Nettoyage : le fichier doit pouvoir etre relance sur une base deja peuplee.
+delete from public.properties where name in ('Immeuble Konan', 'Immeuble Yeture');
+delete from public.memberships
+where organization_id in (select id from public.organizations where name in ('Agence Konan', 'Agence Yeture'));
+delete from public.organizations where name in ('Agence Konan', 'Agence Yeture');
+delete from auth.users where email in ('konan@test.ci', 'yeture@test.ci');
+
 insert into public.organizations (name, city) values ('Agence Konan', 'Bouake');
 insert into auth.users (email, raw_user_meta_data)
 values ('konan@test.ci', '{"full_name":"M. Konan"}'::jsonb);

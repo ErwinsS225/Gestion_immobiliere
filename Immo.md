@@ -1,55 +1,130 @@
 Voici le **prompt maître**, conçu pour être collé tel quel dans **Cursor, Claude Code, Windsurf ou v0**. Il contient tout le contexte produit, métier, technique et commercial dont l'IA a besoin pour construire l'application de bout en bout sans perdre le fil.
 Avant toute modifiction s'inspirer du fichier index.html pour comprendre la structure de l'application.
 
-## ÉTAT D'AVANCEMENT — 01/10/2026
+## ÉTAT D'AVANCEMENT — 01/10/2026 (revue complète du dépôt)
+
+> Cette section a été réécrite après une revue du code. Le journal précédent
+> était en retard sur la réalité : `/dashboard` et `/properties` existaient
+> déjà mais étaient décrits comme non livrés.
+
+### Vue d'ensemble
+
+| # | Livrable | État | Commentaire |
+| --- | --- | --- | --- |
+| 1 | Auth UI | ✅ Terminé | 4 écrans + callback + middleware |
+| 2 | Onboarding | ✅ Code prêt | Parcours authentifié à valider |
+| 3 | Dashboard | 🟡 Coquille | Shell, nav, checklist. **KPI factices** (« À alimenter ») |
+| 4 | CRUD Propriétés | 🟡 Partiel | 1 179 lignes : liste, création, édition, lots. Pas de suppression |
+| 5-13 | Lots, Locataires, Baux, Échéances, Paiements, PDF, WhatsApp, Facturation | ❌ Non commencés | — |
 
 ### Fonctionnalité 1 — Auth UI : réalisée
 
-L'application Next.js 15 se trouve dans `locagest-ci/`. Les écrans suivants sont implémentés et utilisent Supabase Auth :
-
-- `/signup` : création du compte avec nom complet, email et mot de passe ; confirmation par email requise par le parcours.
-- `/login` : connexion email/mot de passe et redirection selon la présence d'un membership.
-- `/forgot-password` et `/reset-password` : demande de réinitialisation puis choix d'un nouveau mot de passe.
+- `/signup` : nom complet, email, mot de passe ; confirmation par email requise.
+- `/login` : connexion et redirection selon la présence d'un membership.
+- `/forgot-password` et `/reset-password` : demande puis choix d'un nouveau mot de passe.
 - `/auth/callback` : échange du code Supabase contre une session.
-- Middleware : rafraîchissement des cookies de session et redirection des visiteurs non connectés depuis les routes protégées.
+- `middleware.ts` : rafraîchit les cookies et protège les routes listées.
 
-Le style reprend la palette forêt/vert citron du prototype `index.html`, avec des écrans français adaptés au mobile. Les champs sont validés avec Zod et les formulaires utilisent React Hook Form.
+Champs validés avec Zod, formulaires avec React Hook Form. Style issu de la
+palette forêt/vert citron du prototype `index.html`, écran français, mobile 390 px
+sans débordement.
 
-### Fonctionnalité 2 — Onboarding : migration appliquée, parcours à valider
+### Fonctionnalité 2 — Onboarding : code prêt, parcours à valider
 
-- `/onboarding` affiche un formulaire protégé : nom d'agence obligatoire, email du compte en lecture seule, téléphone facultatif et ville par défaut `Abidjan`.
-- `POST /api/onboarding` valide le payload avec Zod, vérifie la session avec `auth.getUser()`, puis appelle `create_organization_with_owner()` ; succès attendu : `201 { organizationId }`, puis redirection vers `/dashboard`.
-- La migration `locagest-ci/supabase/migrations/20261001000000_create_organization_with_owner.sql` crée le schéma minimal `organizations` + `memberships`, les rôles, RLS, les fonctions de politique et la RPC transactionnelle.
-- Les tests locaux donnent `400` (JSON invalide), `422` (payload invalide) et `401` (payload valide sans session). Le build Next.js passe, et un visiteur non connecté est redirigé vers `/login?next=%2Fonboarding` au lieu d'une 404.
-- La migration a été appliquée au projet Supabase via le SQL Editor. Vérification PostgREST : `organizations` et `memberships` ne sont plus absentes du schéma ; les requêtes anon reçoivent `42501` (permission refusée), conforme aux grants RLS.
-- L'appel anon à `create_organization_with_owner` reçoit aussi `42501` (permission refusée), preuve que la RPC existe et reste réservée à `authenticated`. Aucun enregistrement de test n'a été créé ; le parcours authentifié de création reste à valider manuellement.
-- Le CLI Supabase courant n'a toujours pas les privilèges sur le projet `clmyavrgwcqjyivotbya` ; aucun `db push` n'a été exécuté. Le lint SQL local n'a pas tourné faute de Postgres local (`127.0.0.1:54322`, Docker requis).
-- Le dépôt GitHub fourni ne publie aucune branche. Aucun `git init`, rattachement de remote ou push n'a été effectué.
+- `/onboarding` : nom d'agence obligatoire, email en lecture seule, téléphone
+  facultatif, ville par défaut `Abidjan`.
+- `POST /api/onboarding` : Zod → `auth.getUser()` → `create_organization_with_owner()`.
+  Succès `201 { organizationId }` puis redirection vers `/dashboard`.
+- Tests locaux : `400` (JSON invalide), `422` (payload invalide), `401` (sans session).
 
-### Configuration Supabase et sécurité
+### Fonctionnalité 3 — Dashboard : coquille livrée, données à brancher
 
-- Le fichier local `locagest-ci/.env.local` contient `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Il est exclu par la règle `.env*` de `locagest-ci/.gitignore` ; aucune valeur de clé ne doit être copiée dans ce document.
-- Seule la clé publique anon est utilisée. Aucune clé `service_role` n'est utilisée côté client.
-- Une requête de lecture vers l'endpoint Auth du projet répond `HTTP 200`.
-- À configurer/vérifier dans Supabase : confirmation email activée ; URL du site local `http://localhost:3000` ; URL de redirection autorisée `http://localhost:3000/auth/callback`.
+`app/dashboard/page.tsx` (240 lignes) : sidebar, badge d'essai calculé depuis
+`organizations.trial_ends_at`, 4 cartes KPI, checklist d'accueil, panneau d'alertes.
+Redirection vers `/onboarding` si l'utilisateur n'a pas de membership.
+
+**Limite assumée** : les KPI affichent le littéral « À alimenter » et la checklist
+reste à `0 / 4`. C'est normal — les tables métier n'existaient pas jusqu'à la
+migration 2. Le branchement est l'étape suivante.
+
+### Fonctionnalité 4 — Propriétés et lots : partiellement livrée
+
+1 179 lignes déjà écrites :
+
+- `GET/POST /api/properties`, `PATCH/DELETE /api/properties/[id]`
+- `GET/POST /api/properties/[id]/units`, `PATCH/DELETE .../units/[unitId]`
+- `app/properties/page.tsx` + `loading.tsx`
+- `property-card.tsx`, `property-form.tsx`, `unit-form.tsx`
+- `lib/validations/properties.ts` (Zod) et `lib/properties/owner.ts`
+
+La création d'une propriété accepte un propriétaire optionnel, avec création à la
+volée dans `owners`. `organization-context.ts` centralise la résolution de
+l'organisation courante et renvoie un `503` explicite sur `PGRST204`/`PGRST205`,
+c'est-à-dire quand la migration 2 n'est pas appliquée.
+
+### Migration 2 — Schéma métier : écrite et validée, à appliquer
+
+`supabase/migrations/20261001000100_create_business_schema.sql` (820 lignes) :
+9 tables, 33 policies RLS, 14 triggers, 30 index.
+
+| Table | Rôle |
+| --- | --- |
+| `profiles` | créé à l'inscription par trigger sur `auth.users` |
+| `owners` | propriétaires de biens |
+| `properties`, `units` | patrimoine ; loyer et charges de base |
+| `tenants` | locataires, téléphone obligatoire |
+| `leases` | loyer/charges **copiés** : une révision de grille ne touche pas l'historique |
+| `rent_calls` | échéances mensuelles |
+| `payments` | règlements hors plateforme (Wave, OM, MTN, Moov, espèces, virement) |
+| `subscription_payments` | **aucun accès `authenticated`**, réservée au webhook CinetPay |
+
+Règles calculées en base : `total_amount = rent + charges`, `amount_paid = somme des
+paiements`, bascule automatique `pending / partial / paid / overdue` à J+5. Fonctions
+`generate_monthly_rent_calls(année, mois)` (idempotente) et `mark_overdue_rent_calls()`,
+réservées au `service_role` pour le cron.
+
+**Application** : coller `locagest-ci/supabase/MIGRATION_2_A_COLLER.sql` dans
+**Supabase → SQL Editor**. Le script affiche d'abord un contrôle qui doit renvoyer
+`2`, puis une vérification finale qui doit renvoyer `9 | 33 | 14`. Le fichier est
+générable avec `python3 scripts/build_migration_script.py`.
 
 ### Vérifications effectuées
 
-- `npm run build` : réussi, compilation, lint et vérification TypeScript inclus.
-- Contrôle navigateur : `/login`, `/signup`, `/forgot-password` et `/reset-password` s'affichent ; validation d'un formulaire vide confirmée.
-- Contrôle mobile à 390 px : pas de débordement horizontal.
-- Sans session, `/onboarding` redirige vers `/login?next=%2Fonboarding`.
-- L'inscription et l'envoi réel d'un email n'ont pas été exécutés ; ils restent à valider manuellement avec une adresse de test après configuration des URL Supabase.
+- `npm run build` : réussi, 15 routes, lint et TypeScript inclus.
+- Migrations rejouées sur Postgres 17 : application sans erreur **sur base vide, sur
+  base non vide, et en réapplication** (idempotence confirmée).
+- `supabase/tests/` : 19 tests SQL rejouables (`business_rules.test.sql`,
+  `rls_isolation.test.sql`) avec `00_local_scaffold.sql` reproduisant l'environnement Supabase.
+- Isolation multi-tenant **prouvée** (critère de succès n°2 du MVP) : avec deux agences
+  distinctes, lecture isolée, écriture croisée bloquée, `anon` sans aucun droit,
+  `viewer` en lecture seule.
+- Dépôt Git initialisé sur `main` ; `.env.local` exclu, `.env.example` suivi.
 
-### Limites et prochaine étape
+### Points signalés, non résolus
 
-- Valider manuellement le parcours authentifié jusqu'à la création d'une agence et d'un membership `owner`.
-- `/dashboard` n'est pas encore implémenté. Une création d'agence réussie redirigera vers cette route ; le tableau de bord et sa checklist d'accueil restent la prochaine fonctionnalité d'interface.
-- Le mode développement `npm run dev` a rencontré une erreur locale Watchpack `EMFILE` ; le build de production et `npm run start` fonctionnent.
-- `npm audit --omit=dev` signale deux vulnérabilités transitives (une modérée, une élevée), dont PostCSS fourni par Next.js. L'override testé n'étant pas appliqué par npm, il a été retiré ; ce point reste à traiter.
-- Le workspace n'est pas encore un dépôt Git ; l'exclusion de `.env.local` est définie dans `.gitignore`, mais n'a pas pu être vérifiée avec `git check-ignore`.
+- **Aucun dépôt Git distant.** Le dépôt local est initialisé avec trois commits, mais
+  aucun `remote` n'est configuré : le travail n'est pas encore sauvegardé hors de cette machine.
+- **Migration 2 pas encore appliquée** sur `clmyavrgwcqjyivotbya`. Le CLI Supabase
+  échoue toujours sur ce projet (`does not have the necessary privileges`), donc
+  l'application passe par le SQL Editor.
+- **CLI non lié au projet** : `supabase/config.toml` absent, aucun `supabase db push` possible.
+- **Écart de stack** : le document impose Tailwind + shadcn/ui, mais aucun composant
+  shadcn n'est installé et tout le style est du CSS maison (`app/globals.css`,
+  1 193 lignes). À trancher avant d'ajouter de nouveaux écrans.
+- **Clé `service_role` présente dans `.env.local`.** Elle n'est pas `NEXT_PUBLIC_` donc
+  elle n'est pas exposée au client, mais elle ne devrait pas rester dans un fichier de développement.
+- **Aucune suite de tests automatisés côté application** (ni Vitest ni Jest), alors que
+  le document impose un test écrit avant tout calcul métier.
+- **2 vulnérabilités npm** (postcss via Next 15.5.27) ; le correctif impose Next 16.
+- **Règles métier non définies et donc volontairement absentes du schéma** : prorata d'un
+  bail démarrant en cours de mois, révision annuelle du loyer, imputation d'un paiement
+  sur plusieurs échéances, régularisation annuelle des charges.
 
-La prochaine étape est le déploiement/contrôle de la migration Supabase, puis la fonctionnalité **Dashboard** avec son état vide et sa checklist d'accueil.
+### Prochaine étape
+
+Appliquer la migration 2 sur Supabase, puis brancher les 4 KPI du dashboard sur les
+données réelles. Avant d'ouvrir le CRUD des locataires, il faudra trancher les règles
+de prorata et d'imputation des paiements.
 
 ---
 

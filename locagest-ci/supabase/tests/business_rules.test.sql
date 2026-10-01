@@ -1,13 +1,27 @@
 -- Test fonctionnel des regles metier de la migration 2.
 -- S'execute en role postgres (contourne RLS) pour verifier d'abord la logique,
--- puis la separation des roles est verifiee dans 02.
+-- puis la separation des roles est verifiee dans rls_isolation.test.sql.
 
 \set ON_ERROR_STOP on
 
 -- --------------------------------------------------------------------
 -- Mise en place : une agence, un proprietaire, une propriete, un lot,
 -- un locataire, un bail actif.
+--
+-- Nettoyage prealable : le fichier doit pouvoir etre relance sur une base
+-- deja peuplee. Les suppressions suivent les cascades declarees.
 -- --------------------------------------------------------------------
+
+delete from public.payments;
+delete from public.rent_calls;
+delete from public.leases;
+delete from public.tenants;
+delete from public.units;
+delete from public.properties;
+delete from public.owners;
+delete from public.memberships;
+delete from public.organizations;
+delete from auth.users;
 
 insert into public.organizations (name, city)
 values ('Agence Kouassi', 'Abidjan');
