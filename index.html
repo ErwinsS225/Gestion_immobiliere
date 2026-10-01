@@ -1,0 +1,1890 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#123a2b" />
+    <title>Yako Immo — Gestion immobilière</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --forest: #153c2c;
+        --forest-2: #1c513b;
+        --leaf: #28734d;
+        --lime: #d7f36a;
+        --lime-soft: #f2f8dc;
+        --ink: #1c2b24;
+        --muted: #76837b;
+        --line: #e7ece7;
+        --paper: #fff;
+        --canvas: #f6f8f5;
+        --orange: #e98154;
+        --orange-soft: #fff0e9;
+        --blue: #5688ba;
+        --blue-soft: #eaf2f9;
+        --red: #c85c50;
+        --shadow: 0 18px 50px rgba(26, 48, 35, 0.11);
+        --radius: 12px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font:
+          14px "DM Sans",
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .app {
+        min-height: 100vh;
+      }
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 246px;
+        background: var(--forest);
+        color: #fff;
+        padding: 26px 18px 20px;
+        display: flex;
+        flex-direction: column;
+        z-index: 5;
+      }
+      .brand {
+        display: flex;
+        gap: 11px;
+        align-items: center;
+        padding: 0 8px 28px;
+      }
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        background: var(--lime);
+        border-radius: 11px;
+        display: grid;
+        place-items: center;
+        color: var(--forest);
+        font:
+          800 20px Manrope,
+          sans-serif;
+        transform: rotate(-4deg);
+      }
+      .brand-name {
+        font:
+          800 19px Manrope,
+          sans-serif;
+        letter-spacing: -0.4px;
+      }
+      .brand-name span {
+        color: var(--lime);
+      }
+      .brand-caption {
+        font-size: 10px;
+        color: #b5c8ba;
+        margin-top: 2px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .workspace {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 12px;
+        background: rgba(255, 255, 255, 0.075);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        margin: 0 0 26px;
+      }
+      .workspace-avatar {
+        width: 29px;
+        height: 29px;
+        border-radius: 8px;
+        background: #e8ae75;
+        color: #3d2818;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .workspace-copy {
+        flex: 1;
+        min-width: 0;
+      }
+      .workspace-copy b {
+        font-size: 12px;
+        display: block;
+      }
+      .workspace-copy small {
+        font-size: 10px;
+        color: #b8cabe;
+      }
+      .workspace-chevron {
+        color: #9fb8a7;
+      }
+      .nav-label {
+        margin: 0 11px 9px;
+        color: #91ac99;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+      .nav-list {
+        display: grid;
+        gap: 5px;
+      }
+      .nav-link {
+        height: 43px;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-radius: 8px;
+        color: #c0d0c5;
+        font-size: 13px;
+        font-weight: 500;
+        transition: 0.18s;
+      }
+      .nav-link:hover {
+        background: rgba(255, 255, 255, 0.07);
+        color: #fff;
+      }
+      .nav-link.active {
+        background: var(--lime);
+        color: var(--forest);
+        font-weight: 700;
+      }
+      .nav-icon {
+        width: 18px;
+        text-align: center;
+        font-size: 16px;
+        opacity: 0.9;
+      }
+      .nav-count {
+        margin-left: auto;
+        padding: 3px 7px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 10px;
+      }
+      .nav-link.active .nav-count {
+        background: rgba(21, 60, 44, 0.12);
+      }
+      .sidebar-bottom {
+        margin-top: auto;
+      }
+      .help-card {
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 10px;
+        margin-bottom: 18px;
+      }
+      .help-card strong {
+        font-size: 12px;
+      }
+      .help-card p {
+        font-size: 11px;
+        line-height: 1.55;
+        color: #b8cabe;
+        margin: 7px 0 12px;
+      }
+      .help-card button {
+        border: 0;
+        background: transparent;
+        color: var(--lime);
+        padding: 0;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .profile {
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        padding: 17px 5px 0;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .profile-pic {
+        width: 33px;
+        height: 33px;
+        border-radius: 50%;
+        background: #d3a781;
+        color: #442c20;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .profile-info {
+        flex: 1;
+      }
+      .profile-info b {
+        font-size: 11px;
+        display: block;
+      }
+      .profile-info span {
+        font-size: 10px;
+        color: #a9c0b0;
+      }
+      .profile-more {
+        color: #9fb5a5;
+      }
+      .main {
+        margin-left: 246px;
+        min-height: 100vh;
+      }
+      .topbar {
+        height: 70px;
+        padding: 0 42px;
+        background: #fff;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 4;
+      }
+      .crumb {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .crumb b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+      }
+      .city-pill {
+        height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: #59665e;
+        font-size: 11px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+      }
+      .city-dot {
+        width: 7px;
+        height: 7px;
+        background: #62a475;
+        border-radius: 50%;
+      }
+      .icon-button {
+        border: 0;
+        background: transparent;
+        color: #69766e;
+        padding: 6px;
+        position: relative;
+        font-size: 17px;
+      }
+      .notification-dot {
+        position: absolute;
+        right: 3px;
+        top: 3px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--orange);
+        border: 1.5px solid white;
+      }
+      .mobile-menu {
+        display: none;
+      }
+      .content {
+        max-width: 1440px;
+        margin: auto;
+        padding: 31px 42px 56px;
+      }
+      .page-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 25px;
+      }
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 10px;
+        color: var(--leaf);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+        margin-bottom: 7px;
+      }
+      .eyebrow:before {
+        content: "";
+        height: 1px;
+        width: 17px;
+        background: var(--leaf);
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+      h1 {
+        font:
+          700 27px Manrope,
+          sans-serif;
+        letter-spacing: -0.7px;
+        margin-bottom: 6px;
+      }
+      .page-subtitle {
+        font-size: 12px;
+        color: var(--muted);
+        margin: 0;
+      }
+      .button {
+        border: 0;
+        border-radius: 7px;
+        padding: 10px 14px;
+        font-size: 11px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        transition: 0.16s;
+      }
+      .button:hover {
+        transform: translateY(-1px);
+      }
+      .button-primary {
+        background: var(--forest);
+        color: white;
+        box-shadow: 0 3px 8px rgba(21, 60, 44, 0.14);
+      }
+      .button-primary:hover {
+        background: var(--forest-2);
+      }
+      .button-light {
+        background: white;
+        border: 1px solid var(--line);
+        color: #536158;
+      }
+      .button-lime {
+        background: var(--lime);
+        color: var(--forest);
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 13px;
+        margin-bottom: 18px;
+      }
+      .metric {
+        position: relative;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 17px 17px 16px;
+        min-height: 117px;
+      }
+      .metric-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .metric-icon {
+        height: 29px;
+        width: 29px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+      }
+      .metric-icon.green {
+        background: var(--lime-soft);
+        color: var(--leaf);
+      }
+      .metric-icon.orange {
+        background: var(--orange-soft);
+        color: var(--orange);
+      }
+      .metric-icon.blue {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+      .metric-icon.dark {
+        background: #edf0e9;
+        color: var(--forest);
+      }
+      .metric-value {
+        font:
+          700 22px Manrope,
+          sans-serif;
+        letter-spacing: -0.5px;
+        margin: 10px 0 5px;
+        white-space: nowrap;
+      }
+      .metric-value small {
+        font:
+          500 11px "DM Sans",
+          sans-serif;
+        letter-spacing: 0;
+      }
+      .metric-foot {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .positive {
+        color: var(--leaf);
+        font-weight: 700;
+      }
+      .warning {
+        color: #c97042;
+        font-weight: 700;
+      }
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(265px, 0.9fr);
+        gap: 15px;
+        margin-bottom: 15px;
+      }
+      .panel {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        min-width: 0;
+      }
+      .panel-head {
+        padding: 17px 19px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .panel-title {
+        font:
+          700 13px Manrope,
+          sans-serif;
+        margin: 0;
+      }
+      .panel-note {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .select-small {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: #68756d;
+        background: white;
+        padding: 7px 9px;
+        font-size: 10px;
+        outline: 0;
+      }
+      .chart-wrap {
+        padding: 3px 16px 11px;
+      }
+      .chart-summary {
+        display: flex;
+        align-items: baseline;
+        gap: 9px;
+        padding-left: 5px;
+        margin-bottom: 3px;
+      }
+      .chart-summary strong {
+        font:
+          700 23px Manrope,
+          sans-serif;
+      }
+      .chart-summary span {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .chart-legend {
+        display: flex;
+        gap: 15px;
+        font-size: 9px;
+        color: var(--muted);
+        align-items: center;
+      }
+      .legend-key {
+        width: 7px;
+        height: 7px;
+        border-radius: 2px;
+        display: inline-block;
+        margin-right: 5px;
+      }
+      .chart {
+        height: 156px;
+        display: flex;
+        align-items: flex-end;
+        gap: 11px;
+        padding: 18px 6px 0;
+        border-bottom: 1px solid var(--line);
+        position: relative;
+      }
+      .chart:before,
+      .chart:after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        border-top: 1px dashed #edf0ec;
+        pointer-events: none;
+      }
+      .chart:before {
+        top: 33%;
+      }
+      .chart:after {
+        top: 66%;
+      }
+      .chart-month {
+        height: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+      }
+      .chart-bars {
+        height: calc(100% - 18px);
+        width: 100%;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 4px;
+      }
+      .bar {
+        width: min(14px, 40%);
+        border-radius: 3px 3px 0 0;
+        min-height: 4px;
+        transition: height 0.35s;
+      }
+      .bar-rent {
+        background: #c6e65a;
+      }
+      .bar-expense {
+        background: #d6e0d7;
+      }
+      .chart-month span {
+        height: 18px;
+        padding-top: 5px;
+        color: #98a39b;
+        font-size: 9px;
+      }
+      .occupancy {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        align-items: center;
+        gap: 18px;
+        padding: 3px 20px 22px;
+      }
+      .donut {
+        width: 116px;
+        height: 116px;
+        border-radius: 50%;
+        background: conic-gradient(var(--leaf) 0 76%, #e9eee9 76% 100%);
+        display: grid;
+        place-items: center;
+        position: relative;
+      }
+      .donut:before {
+        content: "";
+        position: absolute;
+        inset: 11px;
+        border-radius: 50%;
+        background: #fff;
+      }
+      .donut-center {
+        position: relative;
+        text-align: center;
+      }
+      .donut-center b {
+        font:
+          700 24px Manrope,
+          sans-serif;
+        display: block;
+      }
+      .donut-center small {
+        color: var(--muted);
+        font-size: 9px;
+      }
+      .occupancy-legend {
+        display: grid;
+        gap: 13px;
+      }
+      .legend-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        font-size: 10px;
+        color: #617067;
+      }
+      .legend-name {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .legend-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--leaf);
+      }
+      .legend-dot.empty {
+        background: #dfe7df;
+      }
+      .legend-row b {
+        color: var(--ink);
+        font-size: 11px;
+      }
+      .bottom-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(265px, 0.9fr);
+        gap: 15px;
+      }
+      .table-wrap {
+        overflow: auto;
+      }
+      .data-table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 550px;
+      }
+      .data-table th {
+        text-align: left;
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #97a199;
+        font-weight: 700;
+        padding: 10px 18px;
+        border-top: 1px solid #f1f3f0;
+        border-bottom: 1px solid #f1f3f0;
+      }
+      .data-table td {
+        padding: 12px 18px;
+        border-bottom: 1px solid #f1f3f0;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .data-table tr:last-child td {
+        border-bottom: 0;
+      }
+      .property-cell {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: normal;
+      }
+      .property-thumb {
+        height: 35px;
+        width: 43px;
+        border-radius: 5px;
+        object-fit: cover;
+        background: #dce8dc;
+      }
+      .property-name {
+        font-size: 10px;
+        font-weight: 700;
+        display: block;
+        color: var(--ink);
+      }
+      .property-place {
+        font-size: 9px;
+        color: var(--muted);
+        display: block;
+        margin-top: 3px;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 7px;
+        border-radius: 20px;
+        font-size: 9px;
+        font-weight: 700;
+      }
+      .status:before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .status.occupied {
+        background: #edf6e9;
+        color: #548b52;
+      }
+      .status.vacant {
+        background: #fff2e9;
+        color: #c17a4a;
+      }
+      .status.late {
+        background: #fff0ee;
+        color: #c45c50;
+      }
+      .money {
+        font-weight: 700;
+      }
+      .activity-list {
+        padding: 1px 18px 8px;
+      }
+      .activity-row {
+        display: grid;
+        grid-template-columns: 29px 1fr auto;
+        gap: 9px;
+        align-items: center;
+        padding: 11px 0;
+        border-bottom: 1px solid #f1f3f0;
+      }
+      .activity-row:last-child {
+        border: 0;
+      }
+      .activity-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: var(--lime-soft);
+        font-size: 12px;
+        color: var(--leaf);
+      }
+      .activity-icon.out {
+        background: var(--orange-soft);
+        color: var(--orange);
+      }
+      .activity-desc b {
+        display: block;
+        font-size: 10px;
+      }
+      .activity-desc small {
+        display: block;
+        font-size: 9px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .activity-amount {
+        text-align: right;
+        font-weight: 700;
+        font-size: 10px;
+      }
+      .activity-amount.in {
+        color: var(--leaf);
+      }
+      .activity-amount.out {
+        color: var(--orange);
+      }
+      .activity-date {
+        display: block;
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 9px;
+        margin-top: 4px;
+      }
+      .section-panel {
+        margin-bottom: 16px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .search-input {
+        height: 34px;
+        width: 210px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 0 11px;
+        outline: none;
+        font-size: 11px;
+      }
+      .search-input:focus,
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: #76a486;
+        box-shadow: 0 0 0 3px rgba(65, 132, 86, 0.1);
+      }
+      .property-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .property-card {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        transition: 0.2s;
+      }
+      .property-card:hover {
+        box-shadow: 0 9px 25px rgba(26, 48, 35, 0.08);
+        transform: translateY(-2px);
+      }
+      .property-photo {
+        height: 146px;
+        width: 100%;
+        object-fit: cover;
+        display: block;
+        background: #dae6dc;
+      }
+      .property-card-body {
+        padding: 13px 14px 14px;
+      }
+      .property-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .property-card h3 {
+        font:
+          700 13px Manrope,
+          sans-serif;
+        margin: 0 0 4px;
+      }
+      .property-card .place {
+        font-size: 10px;
+        color: var(--muted);
+        margin-bottom: 12px;
+      }
+      .property-facts {
+        display: flex;
+        gap: 13px;
+        padding: 10px 0;
+        border-top: 1px solid #f0f2ef;
+        border-bottom: 1px solid #f0f2ef;
+        font-size: 9px;
+        color: #69766e;
+      }
+      .property-facts b {
+        color: var(--ink);
+        font-size: 10px;
+      }
+      .property-card-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 11px;
+      }
+      .property-card-foot strong {
+        font:
+          700 13px Manrope,
+          sans-serif;
+      }
+      .property-card-foot span {
+        font-size: 9px;
+        color: var(--muted);
+      }
+      .empty-state {
+        text-align: center;
+        padding: 55px 15px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .empty-state strong {
+        display: block;
+        color: var(--ink);
+        font:
+          700 15px Manrope,
+          sans-serif;
+        margin-bottom: 7px;
+      }
+      .finance-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 15px;
+      }
+      .finance-summary .metric {
+        min-height: 98px;
+      }
+      .finance-summary .metric-value {
+        font-size: 19px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .hidden {
+        display: none !important;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(14, 31, 21, 0.46);
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        animation: fade 0.15s ease;
+      }
+      .modal {
+        width: min(480px, 100%);
+        max-height: 90vh;
+        overflow: auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        animation: rise 0.18s ease;
+      }
+      .modal-head {
+        padding: 20px 22px 14px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .modal-head h2 {
+        font:
+          700 18px Manrope,
+          sans-serif;
+        margin: 0 0 4px;
+      }
+      .modal-head p {
+        font-size: 11px;
+        color: var(--muted);
+        margin: 0;
+      }
+      .close-button {
+        border: 0;
+        background: transparent;
+        color: #6a776f;
+        font-size: 20px;
+        padding: 0 3px;
+      }
+      .modal-form {
+        padding: 18px 22px 22px;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 13px;
+      }
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+      .field.full {
+        grid-column: 1/-1;
+      }
+      .field label {
+        font-size: 10px;
+        color: #526057;
+        font-weight: 700;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        width: 100%;
+        height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0 10px;
+        outline: none;
+        background: white;
+        color: var(--ink);
+        font-size: 11px;
+      }
+      .field textarea {
+        height: 68px;
+        padding: 9px;
+        resize: vertical;
+      }
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 19px;
+      }
+      .toast {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 30;
+        background: var(--forest);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 11px;
+        box-shadow: var(--shadow);
+        animation: rise 0.2s ease;
+      }
+      .toast:before {
+        content: "✓";
+        color: var(--lime);
+        margin-right: 8px;
+        font-weight: 700;
+      }
+      .mobile-bottom {
+        display: none;
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(7px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @media (max-width: 1100px) {
+        .sidebar {
+          width: 215px;
+        }
+        .main {
+          margin-left: 215px;
+        }
+        .topbar {
+          padding: 0 25px;
+        }
+        .content {
+          padding: 27px 25px 45px;
+        }
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .property-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 760px) {
+        .sidebar {
+          width: 260px;
+          transform: translateX(-100%);
+          transition: transform 0.22s;
+          box-shadow: var(--shadow);
+        }
+        .sidebar.open {
+          transform: translateX(0);
+        }
+        .main {
+          margin-left: 0;
+          padding-bottom: 68px;
+        }
+        .topbar {
+          height: 58px;
+          padding: 0 16px;
+        }
+        .mobile-menu {
+          display: block;
+        }
+        .crumb {
+          display: none;
+        }
+        .top-actions {
+          gap: 8px;
+        }
+        .city-pill {
+          font-size: 10px;
+          padding: 0 8px;
+        }
+        .content {
+          padding: 22px 15px 32px;
+        }
+        .page-head {
+          align-items: flex-start;
+          gap: 12px;
+        }
+        .page-head .button {
+          padding: 9px 10px;
+          white-space: nowrap;
+        }
+        .page-head h1 {
+          font-size: 23px;
+        }
+        .metrics {
+          gap: 9px;
+        }
+        .metric {
+          padding: 13px;
+          min-height: 104px;
+        }
+        .metric-value {
+          font-size: 19px;
+        }
+        .metric-top {
+          font-size: 10px;
+        }
+        .dashboard-grid,
+        .bottom-grid {
+          grid-template-columns: 1fr;
+          gap: 11px;
+        }
+        .occupancy {
+          grid-template-columns: 110px 1fr;
+        }
+        .donut {
+          width: 106px;
+          height: 106px;
+        }
+        .property-grid {
+          grid-template-columns: 1fr;
+        }
+        .property-photo {
+          height: 175px;
+        }
+        .finance-summary {
+          grid-template-columns: 1fr;
+        }
+        .finance-summary .metric {
+          min-height: 90px;
+        }
+        .toolbar {
+          flex-wrap: wrap;
+        }
+        .search-input {
+          flex: 1;
+          min-width: 130px;
+        }
+        .mobile-bottom {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 4;
+          background: white;
+          border-top: 1px solid var(--line);
+          height: 62px;
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+        .mobile-bottom button {
+          border: 0;
+          background: transparent;
+          color: #79867d;
+          display: grid;
+          justify-items: center;
+          gap: 3px;
+          font-size: 9px;
+        }
+        .mobile-bottom button span:first-child {
+          font-size: 17px;
+        }
+        .mobile-bottom button.active {
+          color: var(--leaf);
+          font-weight: 700;
+        }
+        .data-table th,
+        .data-table td {
+          padding-left: 12px;
+          padding-right: 12px;
+        }
+        .panel-head {
+          padding: 15px;
+        }
+        .chart-wrap {
+          padding-left: 10px;
+          padding-right: 10px;
+        }
+      }
+      @media (max-width: 390px) {
+        .metric-value {
+          font-size: 17px;
+        }
+        .metric {
+          padding: 11px;
+        }
+        .metric-icon {
+          width: 26px;
+          height: 26px;
+        }
+        .city-pill {
+          gap: 4px;
+        }
+        .page-head {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .page-head .button {
+          align-self: flex-end;
+          margin-top: -42px;
+        }
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+        .field.full {
+          grid-column: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <div class="brand-mark">Y</div>
+          <div>
+            <div class="brand-name">yako<span>.</span></div>
+            <div class="brand-caption">Gestion immobilière</div>
+          </div>
+        </div>
+        <div class="workspace">
+          <div class="workspace-avatar">AK</div>
+          <div class="workspace-copy">
+            <b>Agence Koffi</b><small>Compte propriétaire</small>
+          </div>
+          <span class="workspace-chevron">⌄</span>
+        </div>
+        <div class="nav-label">Espace de travail</div>
+        <nav class="nav-list" aria-label="Navigation principale">
+          <a class="nav-link active" href="#dashboard" data-page="dashboard"
+            ><span class="nav-icon">⌂</span>Vue d'ensemble</a
+          >
+          <a class="nav-link" href="#biens" data-page="biens"
+            ><span class="nav-icon">▦</span>Mes biens<span
+              class="nav-count"
+              id="property-count"
+              >3</span
+            ></a
+          >
+          <a class="nav-link" href="#locations" data-page="locations"
+            ><span class="nav-icon">⌑</span>Locations</a
+          >
+          <a class="nav-link" href="#finances" data-page="finances"
+            ><span class="nav-icon">₣</span>Finances</a
+          >
+          <a class="nav-link" href="#locataires" data-page="locataires"
+            ><span class="nav-icon">♙</span>Locataires</a
+          >
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="help-card">
+            <strong>Besoin d'un coup de main ?</strong>
+            <p>
+              Notre équipe est disponible pour vous accompagner dans la gestion
+              de vos biens.
+            </p>
+            <button type="button" id="help-button">
+              Contacter l'assistance ↗
+            </button>
+          </div>
+          <div class="profile">
+            <div class="profile-pic">AK</div>
+            <div class="profile-info">
+              <b>Amadou Koffi</b><span>Propriétaire</span>
+            </div>
+            <span class="profile-more">···</span>
+          </div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="topbar">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <button
+              class="icon-button mobile-menu"
+              id="menu-toggle"
+              aria-label="Ouvrir le menu"
+            >
+              ☰
+            </button>
+            <div class="crumb">
+              Espace propriétaire&nbsp; / &nbsp;<b id="breadcrumb"
+                >Vue d'ensemble</b
+              >
+            </div>
+          </div>
+          <div class="top-actions">
+            <div class="city-pill">
+              <span class="city-dot"></span>Abidjan, Côte d'Ivoire&nbsp;⌄
+            </div>
+            <button
+              class="icon-button"
+              id="notification-button"
+              aria-label="Notifications"
+            >
+              ♧<span class="notification-dot"></span>
+            </button>
+            <div class="profile-pic" style="width: 29px; height: 29px">AK</div>
+          </div>
+        </header>
+        <div class="content" id="content"></div>
+      </main>
+      <nav class="mobile-bottom" aria-label="Navigation mobile">
+        <button class="active" data-page="dashboard">
+          <span>⌂</span>Accueil</button
+        ><button data-page="biens"><span>▦</span>Biens</button
+        ><button data-page="locations"><span>⌑</span>Locations</button
+        ><button data-page="finances"><span>₣</span>Finances</button>
+      </nav>
+    </div>
+    <div id="modal-root"></div>
+    <div id="toast-root" aria-live="polite"></div>
+    <script>
+      (() => {
+        const initialProperties = [
+          {
+            id: "p1",
+            name: "Villa Les Palmiers",
+            type: "Villa",
+            city: "Cocody, Abidjan",
+            rooms: 5,
+            rent: 450000,
+            status: "Occupé",
+            tenant: "Mariam Yao",
+            image:
+              "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&q=80",
+          },
+          {
+            id: "p2",
+            name: "Appartement Riviera 3",
+            type: "Appartement",
+            city: "Riviera 3, Abidjan",
+            rooms: 3,
+            rent: 280000,
+            status: "Occupé",
+            tenant: "Jean Kouamé",
+            image:
+              "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80",
+          },
+          {
+            id: "p3",
+            name: "Studio Zone 4",
+            type: "Studio",
+            city: "Marcory, Abidjan",
+            rooms: 1,
+            rent: 150000,
+            status: "Vacant",
+            tenant: "",
+            image:
+              "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=900&q=80",
+          },
+        ];
+        const initialTransactions = [
+          {
+            id: "t1",
+            kind: "Loyer",
+            property: "Villa Les Palmiers",
+            tenant: "Mariam Yao",
+            amount: 450000,
+            date: "2026-10-01",
+            note: "Loyer octobre",
+          },
+          {
+            id: "t2",
+            kind: "Dépense",
+            property: "Appartement Riviera 3",
+            tenant: "",
+            amount: 35000,
+            date: "2026-09-28",
+            note: "Réparation plomberie",
+          },
+          {
+            id: "t3",
+            kind: "Loyer",
+            property: "Appartement Riviera 3",
+            tenant: "Jean Kouamé",
+            amount: 280000,
+            date: "2026-09-26",
+            note: "Loyer octobre",
+          },
+          {
+            id: "t4",
+            kind: "Dépense",
+            property: "Villa Les Palmiers",
+            tenant: "",
+            amount: 18000,
+            date: "2026-09-20",
+            note: "Entretien espaces verts",
+          },
+        ];
+        const read = (key, fallback) => {
+          try {
+            const data = localStorage.getItem("yako-" + key);
+            return data ? JSON.parse(data) : fallback;
+          } catch {
+            return fallback;
+          }
+        };
+        let properties = read("properties", initialProperties);
+        let transactions = read("transactions", initialTransactions);
+        let currentPage = "dashboard";
+        let query = "";
+        const save = () => {
+          localStorage.setItem("yako-properties", JSON.stringify(properties));
+          localStorage.setItem(
+            "yako-transactions",
+            JSON.stringify(transactions),
+          );
+        };
+        const content = document.getElementById("content");
+        const money = (value) =>
+          new Intl.NumberFormat("fr-FR").format(value) + " FCFA";
+        const shortMoney = (value) =>
+          value >= 1000000
+            ? (value / 1000000).toLocaleString("fr-FR", {
+                maximumFractionDigits: 1,
+              }) + " M"
+            : new Intl.NumberFormat("fr-FR").format(value);
+        const safe = (text = "") =>
+          String(text).replace(
+            /[&<>"']/g,
+            (char) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[char],
+          );
+        const dateLabel = (date) =>
+          new Intl.DateTimeFormat("fr-FR", {
+            day: "numeric",
+            month: "short",
+          }).format(new Date(date + "T12:00:00"));
+        const titleMap = {
+          dashboard: "Vue d'ensemble",
+          biens: "Mes biens",
+          locations: "Locations",
+          finances: "Finances",
+          locataires: "Locataires",
+        };
+        function pageHead(title, subtitle, button = "") {
+          return `<div class="page-head"><div><div class="eyebrow">${title === "Vue d'ensemble" ? "Votre patrimoine" : "Gestion locative"}</div><h1>${title}</h1><p class="page-subtitle">${subtitle}</p></div>${button}</div>`;
+        }
+        function cardMetric(label, value, icon, color, foot) {
+          return `<article class="metric"><div class="metric-top">${label}<span class="metric-icon ${color}">${icon}</span></div><div class="metric-value">${value}</div><div class="metric-foot">${foot}</div></article>`;
+        }
+        function propertyStatus(status) {
+          return `<span class="status ${status === "Occupé" ? "occupied" : "vacant"}">${status}</span>`;
+        }
+        function transactionRows(items) {
+          return (
+            items
+              .slice(0, 5)
+              .map(
+                (tx) =>
+                  `<div class="activity-row"><div class="activity-icon ${tx.kind === "Dépense" ? "out" : ""}">${tx.kind === "Dépense" ? "↙" : "↗"}</div><div class="activity-desc"><b>${safe(tx.note || tx.kind)}</b><small>${safe(tx.property)}${tx.tenant ? " · " + safe(tx.tenant) : ""}</small></div><div class="activity-amount ${tx.kind === "Dépense" ? "out" : "in"}">${tx.kind === "Dépense" ? "−" : "+"}${shortMoney(tx.amount)}<span class="activity-date">${dateLabel(tx.date)}</span></div></div>`,
+              )
+              .join("") ||
+            '<div class="empty-state">Aucune opération enregistrée.</div>'
+          );
+        }
+        function renderDashboard() {
+          const income = transactions
+              .filter((x) => x.kind === "Loyer")
+              .reduce((sum, x) => sum + x.amount, 0),
+            expenses = transactions
+              .filter((x) => x.kind === "Dépense")
+              .reduce((sum, x) => sum + x.amount, 0),
+            occupied = properties.filter((x) => x.status === "Occupé").length;
+          const months = Array.from(
+            { length: 6 },
+            (_, index) =>
+              new Date(
+                new Date().getFullYear(),
+                new Date().getMonth() - 5 + index,
+                1,
+              ),
+          );
+          const monthlyData = months.map((date) => {
+            const month = date.toISOString().slice(0, 7);
+            return {
+              label: new Intl.DateTimeFormat("fr-FR", {
+                month: "short",
+              }).format(date),
+              rent: transactions
+                .filter(
+                  (tx) => tx.kind === "Loyer" && tx.date.startsWith(month),
+                )
+                .reduce((sum, tx) => sum + tx.amount, 0),
+              cost: transactions
+                .filter(
+                  (tx) => tx.kind === "Dépense" && tx.date.startsWith(month),
+                )
+                .reduce((sum, tx) => sum + tx.amount, 0),
+            };
+          });
+          const maxMonthly = Math.max(
+            1,
+            ...monthlyData.map((month) => Math.max(month.rent, month.cost)),
+          );
+          const monthBars = monthlyData
+            .map(
+              (month) =>
+                `<div class="chart-month"><div class="chart-bars"><div class="bar bar-rent" style="height:${(month.rent / maxMonthly) * 90}%" title="Loyers : ${money(month.rent)}"></div><div class="bar bar-expense" style="height:${(month.cost / maxMonthly) * 90}%" title="Dépenses : ${money(month.cost)}"></div></div><span>${month.label}</span></div>`,
+            )
+            .join("");
+          const propertiesPreview = properties
+            .slice(0, 3)
+            .map(
+              (p) =>
+                `<tr><td><div class="property-cell"><img class="property-thumb" src="${safe(p.image)}" alt=""><div><span class="property-name">${safe(p.name)}</span><span class="property-place">${safe(p.city)}</span></div></div></td><td>${propertyStatus(p.status)}</td><td>${safe(p.tenant || "—")}</td><td class="money">${shortMoney(p.rent)} FCFA</td></tr>`,
+            )
+            .join("");
+          content.innerHTML =
+            pageHead(
+              "Vue d'ensemble",
+              "Un aperçu clair de vos revenus et de vos biens.",
+              `<button class="button button-primary" data-action="transaction">＋ Enregistrer une opération</button>`,
+            ) +
+            `
+      <section class="metrics">${cardMetric("Revenus enregistrés", shortMoney(income) + " <small>FCFA</small>", "↗", "green", '<span class="positive">↑</span> Loyers perçus')}${cardMetric("Dépenses enregistrées", shortMoney(expenses) + " <small>FCFA</small>", "↙", "orange", "Entretien & charges")}${cardMetric("Biens immobiliers", properties.length, "▦", "blue", "Dans votre portefeuille")}${cardMetric("Taux d’occupation", properties.length ? Math.round((occupied / properties.length) * 100) + "%" : "0%", "◉", "dark", `${occupied} bien${occupied > 1 ? "s" : ""} occupé${occupied > 1 ? "s" : ""}`)}</section>
+      <section class="dashboard-grid"><article class="panel"><div class="panel-head"><div><h2 class="panel-title">Revenus & dépenses</h2><div class="panel-note">Suivi de votre activité immobilière</div></div><select class="select-small" aria-label="Période du graphique"><option>6 derniers mois</option><option>12 derniers mois</option></select></div><div class="chart-wrap"><div class="chart-summary"><strong>${shortMoney(income - expenses)} <small style="font:500 11px 'DM Sans'">FCFA</small></strong><span>solde net enregistré</span></div><div class="chart-legend"><span><i class="legend-key" style="background:#c6e65a"></i>Loyers</span><span><i class="legend-key" style="background:#d6e0d7"></i>Dépenses</span></div><div class="chart">${monthBars}</div></div></article>
+      <article class="panel"><div class="panel-head"><div><h2 class="panel-title">Occupation des biens</h2><div class="panel-note">État de votre portefeuille</div></div><button class="icon-button" aria-label="Plus d'options">···</button></div><div class="occupancy"><div class="donut" style="background:conic-gradient(var(--leaf) 0 ${properties.length ? (occupied / properties.length) * 100 : 0}%,#e9eee9 ${properties.length ? (occupied / properties.length) * 100 : 0}% 100%)"><div class="donut-center"><b>${properties.length ? Math.round((occupied / properties.length) * 100) : 0}%</b><small>occupés</small></div></div><div class="occupancy-legend"><div class="legend-row"><span class="legend-name"><i class="legend-dot"></i>Occupés</span><b>${occupied} bien${occupied > 1 ? "s" : ""}</b></div><div class="legend-row"><span class="legend-name"><i class="legend-dot empty"></i>Disponibles</span><b>${properties.length - occupied} bien${properties.length - occupied > 1 ? "s" : ""}</b></div><button class="button button-light" style="justify-content:center;margin-top:2px" data-page="biens">Voir mes biens →</button></div></div></article></section>
+      <section class="bottom-grid"><article class="panel"><div class="panel-head"><div><h2 class="panel-title">Vos biens immobiliers</h2><div class="panel-note">Les derniers biens de votre portefeuille</div></div><button class="button button-light" data-page="biens">Tout voir →</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Bien immobilier</th><th>Statut</th><th>Locataire</th><th>Loyer mensuel</th></tr></thead><tbody>${propertiesPreview || '<tr><td colspan="4">Aucun bien ajouté pour le moment.</td></tr>'}</tbody></table></div></article><article class="panel"><div class="panel-head"><div><h2 class="panel-title">Activité récente</h2><div class="panel-note">Vos dernières opérations</div></div><button class="icon-button" data-page="finances" aria-label="Voir les finances">→</button></div><div class="activity-list">${transactionRows(transactions.slice().sort((a, b) => b.date.localeCompare(a.date)))}</div></article></section>`;
+        }
+        function propertyCard(p) {
+          return `<article class="property-card"><img class="property-photo" src="${safe(p.image || "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80")}" alt="${safe(p.name)}"><div class="property-card-body"><div class="property-card-head"><div><h3>${safe(p.name)}</h3><div class="place">⌖ ${safe(p.city)}</div></div>${propertyStatus(p.status)}</div><div class="property-facts"><span><b>${safe(p.type)}</b></span><span><b>${p.rooms}</b> pièce${p.rooms > 1 ? "s" : ""}</span><span><b>${safe(p.tenant || "Libre")}</b></span></div><div class="property-card-foot"><strong>${shortMoney(p.rent)} FCFA <span>/ mois</span></strong><button class="icon-button" data-action="edit-property" data-id="${p.id}" aria-label="Modifier ${safe(p.name)}">···</button></div></div></article>`;
+        }
+        function renderProperties() {
+          const filtered = properties.filter((p) =>
+            (p.name + " " + p.city + " " + p.tenant)
+              .toLowerCase()
+              .includes(query.toLowerCase()),
+          );
+          content.innerHTML =
+            pageHead(
+              "Mes biens",
+              "Retrouvez et gérez les biens de votre portefeuille.",
+              `<button class="button button-primary" data-action="property">＋ Ajouter un bien</button>`,
+            ) +
+            `<section class="panel section-panel"><div class="panel-head"><div><h2 class="panel-title">Portefeuille immobilier <span class="muted">(${properties.length})</span></h2><div class="panel-note">Vos propriétés, leur statut et leurs loyers</div></div><div class="toolbar"><input class="search-input" id="property-search" placeholder="⌕  Rechercher un bien..." value="${safe(query)}"><select class="select-small" id="property-filter"><option value="">Tous les statuts</option><option>Occupé</option><option>Vacant</option></select></div></div></section><section class="property-grid" id="property-grid">${filtered.map(propertyCard).join("") || '<div class="panel empty-state" style="grid-column:1/-1"><strong>Aucun bien trouvé</strong>Ajoutez un bien ou modifiez votre recherche.</div>'}</section>`;
+          document
+            .getElementById("property-search")
+            .addEventListener("input", (e) => {
+              query = e.target.value;
+              renderProperties();
+              const input = document.getElementById("property-search");
+              input.focus();
+              input.setSelectionRange(query.length, query.length);
+            });
+          document
+            .getElementById("property-filter")
+            .addEventListener("change", (e) => {
+              const status = e.target.value;
+              document.querySelectorAll(".property-card").forEach((card) => {
+                card.classList.toggle(
+                  "hidden",
+                  status &&
+                    !card.querySelector(".status").textContent.includes(status),
+                );
+              });
+            });
+        }
+        function renderLocations() {
+          const rented = properties.filter((p) => p.status === "Occupé");
+          const metrics = [
+            cardMetric(
+              "Loyers mensuels attendus",
+              shortMoney(rented.reduce((sum, p) => sum + p.rent, 0)) +
+                " <small>FCFA</small>",
+              "↗",
+              "green",
+              `${rented.length} location${rented.length === 1 ? "" : "s"} active${rented.length === 1 ? "" : "s"}`,
+            ),
+            cardMetric(
+              "Locations actives",
+              rented.length,
+              "⌑",
+              "blue",
+              "Biens actuellement occupés",
+            ),
+            cardMetric(
+              "Biens disponibles",
+              properties.length - rented.length,
+              "⌂",
+              "orange",
+              "À proposer à la location",
+            ),
+            cardMetric(
+              "Loyers enregistrés",
+              transactions.filter((t) => t.kind === "Loyer").length,
+              "₣",
+              "dark",
+              "Opérations dans votre historique",
+            ),
+          ].join("");
+          const rows =
+            rented
+              .map(
+                (p) =>
+                  `<tr><td><div class="property-cell"><div><span class="property-name">${safe(p.name)}</span><span class="property-place">${safe(p.city)}</span></div></div></td><td>${safe(p.tenant || "—")}</td><td>${propertyStatus(p.status)}</td><td class="money">${money(p.rent)}</td><td><button class="button button-light" data-action="transaction" data-property="${p.id}">Noter le loyer</button></td></tr>`,
+              )
+              .join("") ||
+            '<tr><td colspan="5">Aucune location active.</td></tr>';
+          content.innerHTML =
+            pageHead(
+              "Locations",
+              "Suivez les baux et les loyers de vos locataires.",
+              `<button class="button button-primary" data-action="transaction">＋ Enregistrer un loyer</button>`,
+            ) +
+            `<section class="metrics">${metrics}</section><article class="panel"><div class="panel-head"><div><h2 class="panel-title">Baux en cours</h2><div class="panel-note">Locataires et loyers mensuels</div></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Bien</th><th>Locataire</th><th>Statut</th><th>Loyer mensuel</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></article>`;
+        }
+        function renderFinances() {
+          const income = transactions
+              .filter((t) => t.kind === "Loyer")
+              .reduce((s, t) => s + t.amount, 0),
+            expenses = transactions
+              .filter((t) => t.kind === "Dépense")
+              .reduce((s, t) => s + t.amount, 0);
+          content.innerHTML =
+            pageHead(
+              "Finances",
+              "Gardez une vision simple des loyers perçus et des dépenses.",
+              `<button class="button button-primary" data-action="transaction">＋ Nouvelle opération</button>`,
+            ) +
+            `<section class="finance-summary">${cardMetric("Revenus", money(income), "↗", "green", "Loyers enregistrés")}${cardMetric("Dépenses", money(expenses), "↙", "orange", "Charges enregistrées")}${cardMetric("Solde net", money(income - expenses), "₣", "dark", "Revenus moins dépenses")}</section><article class="panel"><div class="panel-head"><div><h2 class="panel-title">Historique des opérations</h2><div class="panel-note">Toutes les entrées et sorties enregistrées</div></div><select class="select-small" id="transaction-filter"><option value="">Toutes les opérations</option><option>Loyer</option><option>Dépense</option></select></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Opération</th><th>Bien</th><th>Date</th><th>Montant</th><th>Type</th></tr></thead><tbody id="transaction-rows">${
+              transactions
+                .slice()
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .map(transactionTableRow)
+                .join("") || '<tr><td colspan="5">Aucune opération.</td></tr>'
+            }</tbody></table></div></article>`;
+          document
+            .getElementById("transaction-filter")
+            .addEventListener("change", (e) => {
+              const f = e.target.value;
+              const list = transactions
+                .slice()
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .filter((t) => !f || t.kind === f);
+              document.getElementById("transaction-rows").innerHTML =
+                list.map(transactionTableRow).join("") ||
+                '<tr><td colspan="5">Aucune opération pour ce filtre.</td></tr>';
+            });
+        }
+        function transactionTableRow(t) {
+          return `<tr><td><span class="property-name">${safe(t.note || t.kind)}</span><span class="property-place">${safe(t.tenant || t.kind)}</span></td><td>${safe(t.property)}</td><td>${dateLabel(t.date)}</td><td class="money" style="color:${t.kind === "Dépense" ? "var(--orange)" : "var(--leaf)"}">${t.kind === "Dépense" ? "−" : "+"}${money(t.amount)}</td><td>${t.kind === "Dépense" ? '<span class="status vacant">Dépense</span>' : '<span class="status occupied">Loyer</span>'}</td></tr>`;
+        }
+        function renderTenants() {
+          const tenants = properties.filter(
+            (p) => p.tenant && p.status === "Occupé",
+          );
+          content.innerHTML =
+            pageHead(
+              "Locataires",
+              "Les informations utiles sur les occupants de vos biens.",
+              `<button class="button button-primary" data-page="biens">＋ Gérer les biens</button>`,
+            ) +
+            `<article class="panel"><div class="panel-head"><div><h2 class="panel-title">Locataires actifs</h2><div class="panel-note">${tenants.length} occupant${tenants.length > 1 ? "s" : ""} renseigné${tenants.length > 1 ? "s" : ""}</div></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Locataire</th><th>Bien occupé</th><th>Localisation</th><th>Loyer mensuel</th></tr></thead><tbody>${
+              tenants
+                .map(
+                  (p) =>
+                    `<tr><td><div class="property-cell"><div class="profile-pic" style="width:30px;height:30px;background:var(--lime-soft);color:var(--leaf)">${safe(
+                      p.tenant
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase(),
+                    )}</div><span class="property-name">${safe(p.tenant)}</span></div></td><td>${safe(p.name)}</td><td>${safe(p.city)}</td><td class="money">${money(p.rent)}</td></tr>`,
+                )
+                .join("") ||
+              '<tr><td colspan="4">Aucun locataire renseigné. Ajoutez un locataire depuis une fiche de bien.</td></tr>'
+            }</tbody></table></div></article>`;
+        }
+        function render() {
+          document.getElementById("breadcrumb").textContent =
+            titleMap[currentPage];
+          document
+            .querySelectorAll(".nav-link")
+            .forEach((a) =>
+              a.classList.toggle("active", a.dataset.page === currentPage),
+            );
+          document
+            .querySelectorAll(".mobile-bottom button")
+            .forEach((a) =>
+              a.classList.toggle("active", a.dataset.page === currentPage),
+            );
+          document.getElementById("property-count").textContent =
+            properties.length;
+          (
+            ({
+              dashboard: renderDashboard,
+              biens: renderProperties,
+              locations: renderLocations,
+              finances: renderFinances,
+              locataires: renderTenants,
+            })[currentPage] || renderDashboard
+          )();
+        }
+        function showModal(title, subtitle, fields, onSubmit) {
+          const root = document.getElementById("modal-root");
+          root.innerHTML = `<div class="modal-backdrop" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><h2 id="modal-title">${title}</h2><p>${subtitle}</p></div><button class="close-button" type="button" aria-label="Fermer">×</button></div><form class="modal-form"><div class="form-grid">${fields}</div><div class="form-actions"><button class="button button-light" type="button" data-close>Annuler</button><button class="button button-primary" type="submit">Enregistrer</button></div></form></section></div>`;
+          const backdrop = root.querySelector(".modal-backdrop");
+          const close = () => (root.innerHTML = "");
+          root.querySelector(".close-button").onclick = close;
+          root.querySelector("[data-close]").onclick = close;
+          backdrop.addEventListener("click", (e) => {
+            if (e.target === backdrop) close();
+          });
+          root.querySelector("form").addEventListener("submit", (e) => {
+            e.preventDefault();
+            onSubmit(new FormData(e.currentTarget));
+          });
+          root.querySelector("input,select")?.focus();
+        }
+        function openPropertyModal(propertyId = "") {
+          const property = properties.find((p) => p.id === propertyId);
+          const fields = `<div class="field"><label for="p-name">Nom du bien *</label><input id="p-name" name="name" placeholder="Ex. Villa les Orchidées" value="${safe(property?.name || "")}" required></div><div class="field"><label for="p-type">Type de bien</label><select id="p-type" name="type">${["Appartement", "Villa", "Studio", "Commerce", "Bureau", "Terrain"].map((type) => `<option ${property?.type === type ? "selected" : ""}>${type}</option>`).join("")}</select></div><div class="field full"><label for="p-city">Commune / quartier *</label><input id="p-city" name="city" placeholder="Ex. Cocody, Abidjan" value="${safe(property?.city || "")}" required></div><div class="field"><label for="p-rooms">Nombre de pièces</label><input id="p-rooms" name="rooms" type="number" min="0" value="${property?.rooms ?? 2}"></div><div class="field"><label for="p-rent">Loyer mensuel (FCFA) *</label><input id="p-rent" name="rent" type="number" min="0" step="5000" placeholder="250000" value="${property?.rent ?? ""}" required></div><div class="field"><label for="p-status">Statut</label><select id="p-status" name="status"><option ${property?.status === "Vacant" ? "selected" : ""}>Vacant</option><option ${property?.status === "Occupé" ? "selected" : ""}>Occupé</option></select></div><div class="field"><label for="p-tenant">Nom du locataire</label><input id="p-tenant" name="tenant" placeholder="Facultatif" value="${safe(property?.tenant || "")}"></div>${property ? '<div class="field full"><button class="button button-light" type="button" data-remove-property style="color:var(--red)">Supprimer ce bien</button></div>' : ""}`;
+          showModal(
+            property ? "Modifier un bien" : "Ajouter un bien",
+            property
+              ? "Mettez à jour les informations de votre bien."
+              : "Renseignez les informations principales de votre bien.",
+            fields,
+            (data) => {
+              const values = {
+                name: data.get("name").trim(),
+                type: data.get("type"),
+                city: data.get("city").trim(),
+                rooms: Number(data.get("rooms")) || 0,
+                rent: Number(data.get("rent")) || 0,
+                status: data.get("status"),
+                tenant: data.get("tenant").trim(),
+              };
+              if (property) {
+                Object.assign(property, values);
+              } else {
+                properties.unshift({
+                  id: "p" + Date.now(),
+                  ...values,
+                  image:
+                    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80",
+                });
+              }
+              save();
+              document.getElementById("modal-root").innerHTML = "";
+              render();
+              toast(
+                property
+                  ? "Bien mis à jour"
+                  : "Bien ajouté à votre portefeuille",
+              );
+            },
+          );
+          const removeButton = document.querySelector("[data-remove-property]");
+          if (removeButton)
+            removeButton.onclick = () => {
+              if (
+                confirm(
+                  `Supprimer « ${property.name} » de votre portefeuille ?`,
+                )
+              ) {
+                properties = properties.filter((p) => p.id !== property.id);
+                save();
+                document.getElementById("modal-root").innerHTML = "";
+                render();
+                toast("Bien supprimé");
+              }
+            };
+        }
+        function openTransactionModal(propertyId = "") {
+          const options = properties
+            .map(
+              (p) =>
+                `<option value="${safe(p.id)}" ${p.id === propertyId ? "selected" : ""}>${safe(p.name)}</option>`,
+            )
+            .join("");
+          const fields = `<div class="field"><label for="t-kind">Type d'opération *</label><select id="t-kind" name="kind"><option>Loyer</option><option>Dépense</option></select></div><div class="field"><label for="t-amount">Montant (FCFA) *</label><input id="t-amount" name="amount" type="number" min="1" step="500" placeholder="250000" required></div><div class="field full"><label for="t-property">Bien concerné *</label><select id="t-property" name="property" required>${options || '<option value="">Ajoutez d’abord un bien</option>'}</select></div><div class="field"><label for="t-date">Date *</label><input id="t-date" name="date" type="date" value="${new Date().toISOString().slice(0, 10)}" required></div><div class="field"><label for="t-tenant">Locataire (facultatif)</label><input id="t-tenant" name="tenant" placeholder="Nom du locataire"></div><div class="field full"><label for="t-note">Libellé</label><input id="t-note" name="note" placeholder="Ex. Loyer du mois d'octobre"></div>`;
+          showModal(
+            "Enregistrer une opération",
+            "Chaque loyer ou dépense est conservé dans votre historique.",
+            fields,
+            (data) => {
+              const property = properties.find(
+                (p) => p.id === data.get("property"),
+              );
+              if (!property) {
+                toast("Ajoutez d’abord un bien immobilier");
+                return;
+              }
+              transactions.unshift({
+                id: "t" + Date.now(),
+                kind: data.get("kind"),
+                property: property.name,
+                tenant: data.get("tenant").trim(),
+                amount: Number(data.get("amount")),
+                date: data.get("date"),
+                note: data.get("note").trim() || data.get("kind"),
+              });
+              if (data.get("kind") === "Loyer" && data.get("tenant").trim()) {
+                property.tenant = data.get("tenant").trim();
+                property.status = "Occupé";
+              }
+              save();
+              document.getElementById("modal-root").innerHTML = "";
+              render();
+              toast("Opération enregistrée");
+            },
+          );
+        }
+        function toast(message) {
+          const root = document.getElementById("toast-root");
+          root.innerHTML = `<div class="toast">${safe(message)}</div>`;
+          setTimeout(() => (root.innerHTML = ""), 2600);
+        }
+        document.addEventListener("click", (e) => {
+          const page = e.target.closest("[data-page]");
+          if (page) {
+            e.preventDefault();
+            currentPage = page.dataset.page;
+            query = "";
+            render();
+            document.getElementById("sidebar").classList.remove("open");
+            return;
+          }
+          const action = e.target.closest("[data-action]");
+          if (action) {
+            if (action.dataset.action === "property") openPropertyModal();
+            if (action.dataset.action === "transaction")
+              openTransactionModal(action.dataset.property || "");
+            if (action.dataset.action === "edit-property")
+              openPropertyModal(action.dataset.id);
+            return;
+          }
+          if (e.target.closest("#menu-toggle"))
+            document.getElementById("sidebar").classList.toggle("open");
+          if (e.target.closest("#notification-button"))
+            toast("Vous êtes à jour, aucune nouvelle notification");
+          if (e.target.closest("#help-button"))
+            toast("Contactez-nous au +225 07 00 00 00 00");
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape")
+            document.getElementById("modal-root").innerHTML = "";
+        });
+        render();
+      })();
+    </script>
+  </body>
+</html>
