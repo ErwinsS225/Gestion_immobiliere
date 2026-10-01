@@ -56,7 +56,7 @@ export async function PATCH(
       })
       .eq("id", existing.id)
       .eq("organization_id", context.organizationId)
-      .select("id")
+      .select("id, owner_id")
       .maybeSingle();
 
     if (error || !data) {

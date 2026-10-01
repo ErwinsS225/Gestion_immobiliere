@@ -28,6 +28,10 @@ interface PropertyFormProps {
 interface ApiResult {
   error?: string;
   fieldErrors?: Record<string, string>;
+  property?: {
+    id: string;
+    owner_id: string | null;
+  };
 }
 
 const communes = [
@@ -131,13 +135,15 @@ export function PropertyForm({ owners, property, onCancel }: PropertyFormProps) 
         setAddress("");
         setCommune("");
         setOwnerId("");
-        setIsAddingOwner(false);
-        setOwnerFullName("");
-        setOwnerPhone("");
-        setOwnerEmail("");
-        setOwnerIdDocument("");
-        setOwnerNotes("");
+      } else {
+        setOwnerId(result.property?.owner_id ?? "");
       }
+      setIsAddingOwner(false);
+      setOwnerFullName("");
+      setOwnerPhone("");
+      setOwnerEmail("");
+      setOwnerIdDocument("");
+      setOwnerNotes("");
       router.refresh();
     } catch {
       setError("Connexion impossible. Vérifiez votre réseau ; vos informations sont conservées.");

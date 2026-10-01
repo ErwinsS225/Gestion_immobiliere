@@ -64,6 +64,12 @@ export function databaseErrorResponse(
   error: { code?: string; message?: string },
   fallback: string,
 ) {
+  if (error.code === "PGRST204" || error.code === "PGRST205") {
+    return NextResponse.json(
+      { error: "Le schéma métier Supabase est incomplet. Appliquez les migrations de l’application, puis réessayez." },
+      { status: 503 },
+    );
+  }
   if (error.code === "23505") {
     return NextResponse.json(
       { error: "Un lot portant ce libellé existe déjà dans ce bien. Choisissez un autre libellé." },
