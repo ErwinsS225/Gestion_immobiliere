@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_PRORATA_BASIS,
   DEFAULT_PRORATA_MODE,
   MAX_DEPOSIT_MONTHS,
+  MAX_RENT_ADVANCE_MONTHS,
   MIN_REVISION_YEARS,
   computeMoveInBreakdown,
   computeProrata,
@@ -124,13 +126,99 @@ describe("computeMoveInBreakdown", () => {
   });
 });
 
+describe("base de calcul : mois reel contre mois de 30 jours", () => {
+  it("divise par le nombre reel de jours avec le mois reel", () => {
+    const resultat = computeProrata(175_000, "2026-10-15", "days_remaining", "calendar_month");
+    expect(resultat.totalDays).toBe(31);
+    expect(resultat.amount).toBe(Math.round((175_000 * 17) / 31));
+  });
+
+  it("divise par 30 avec le mois de 30 jours", () => {
+    const resultat = computeProrata(175_000, "2026-10-15", "days_remaining", "thirty_day_month");
+    expect(resultat.totalDays).toBe(30);
+    expect(resultat.amount).toBe(Math.round((175_000 * 17) / 30));
+  });
+
+  it("majore le prorata d environ 3 % avec le mois de 30 jours", () => {
+    const reel = computeProrata(175_000, "2026-10-15", "days_remaining", "calendar_month");
+    const commercial = computeProrata(175_000, "2026-10-15", "days_remaining", "thirty_day_month");
+    expect(commercial.amount).toBeGreaterThan(reel.amount);
+    const ecart = (commercial.amount - reel.amount) / reel.amount;
+    expect(ecart).toBeGreaterThan(0.02);
+    expect(ecart).toBeLessThan(0.05);
+  });
+
+  it("uniformise le denominateur a 30 quel que soit le mois", () => {
+    // Octobre compte 31 jours et avril 30. Les journees occupees ne sont donc
+    // pas les memes : 17 en octobre, 16 en avril. Ce qui doit etre identique,
+    // c est le denominateur, 30 dans les deux cas. On compare donc le prorata
+    // d un meme nombre de journees dans deux mois de longueurs differentes.
+    const octobre = computeProrata(150_000, "2026-10-16", "days_remaining", "thirty_day_month");
+    const avril = computeProrata(150_000, "2026-04-16", "days_remaining", "thirty_day_month");
+
+    expect(octobre.occupiedDays).toBe(16); // 31 - 16 + 1
+    expect(avril.occupiedDays).toBe(15); // 30 - 16 + 1
+    expect(octobre.totalDays).toBe(30);
+    expect(avril.totalDays).toBe(30);
+
+    // Chaque montant suit bien son propre nombre de journees sur 30.
+    expect(octobre.amount).toBe(Math.round((150_000 * 16) / 30));
+    expect(avril.amount).toBe(Math.round((150_000 * 15) / 30));
+  });
+
+  it("donne le meme montant pour une meme journee dans deux mois differents", () => {
+    // Deux baux d une seule journee, l un en octobre, l autre en avril :
+    // la base de 30 jours donne le meme resultat, la base reelle non.
+    const octobre = computeProrata(150_000, "2026-10-31", "days_remaining_plus_one", "thirty_day_month");
+    const avril = computeProrata(150_000, "2026-04-30", "days_remaining_plus_one", "thirty_day_month");
+
+    // Le garde-fou s applique en base 30 jours sur ces occupations courtes.
+    expect(octobre.safetyApplied).toBe(true);
+    expect(avril.safetyApplied).toBe(true);
+    expect(octobre.amount).toBe(avril.amount);
+  });
+
+  it("applique le garde-fou sur une occupation trop courte", () => {
+    // Bail le 31 octobre : 1 jour sur 30 ferait pres d un tiers du loyer pour une
+    // seule journee d occupation. Le mois plein est retenu.
+    const resultat = computeProrata(175_000, "2026-10-31", "days_remaining", "thirty_day_month");
+    expect(resultat.safetyApplied).toBe(true);
+    expect(resultat.isFullMonth).toBe(true);
+    expect(resultat.amount).toBe(175_000);
+  });
+
+  it("n applique pas le garde-fou quand l occupation est suffisante", () => {
+    const resultat = computeProrata(175_000, "2026-10-15", "days_remaining", "thirty_day_month");
+    expect(resultat.safetyApplied).toBe(false);
+    expect(resultat.isFullMonth).toBe(false);
+  });
+
+  it("ne declenche pas le garde-fou en mois reel pour un bail le 31", () => {
+    // 1 jour sur 31 reste sous le seuil : le prorata est conserve.
+    const resultat = computeProrata(150_000, "2026-10-31", "days_remaining", "calendar_month");
+    expect(resultat.safetyApplied).toBe(false);
+    expect(resultat.amount).toBe(Math.round(150_000 / 31));
+  });
+
+  it("ne prorate pas un bail demarrant le 1er, quelle que soit la base", () => {
+    for (const basis of ["calendar_month", "thirty_day_month"] as const) {
+      const resultat = computeProrata(175_000, "2026-10-01", "days_remaining", basis);
+      expect(resultat.amount).toBe(175_000);
+      expect(resultat.safetyApplied).toBe(false);
+    }
+  });
+});
+
 describe("cadre juridique applique", () => {
   it("retient les plafonds des articles 415, 416 et 455", () => {
     expect(MAX_DEPOSIT_MONTHS).toBe(2);
     expect(MIN_REVISION_YEARS).toBe(3);
+    expect(MAX_RENT_ADVANCE_MONTHS).toBe(2);
   });
 
-  it("applique par defaut la regle des jours restants", () => {
+  it("applique par defaut les jours restants et le mois reel", () => {
     expect(DEFAULT_PRORATA_MODE).toBe("days_remaining");
+    expect(DEFAULT_PRORATA_BASIS).toBe("calendar_month");
   });
 });
+
