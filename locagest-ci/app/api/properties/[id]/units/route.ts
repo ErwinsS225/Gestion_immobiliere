@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { unitSchema } from "@/lib/validations/properties";
+import { buildUnitPayload } from "@/lib/properties/unit-payload";
 import {
   databaseErrorResponse,
   requireOrganization,
@@ -42,7 +43,9 @@ export async function GET(
 
     const { data: units, error } = await context.supabase
       .from("units")
-      .select("id, label, unit_type, surface_area, room_count, base_rent, charges, status")
+      .select(
+        "id, label, unit_type, unit_type_v2, category, surface_area, room_count, base_rent, charges, deposit_amount, floor, building_section, metadata, status",
+      )
       .eq("organization_id", context.organizationId)
       .eq("property_id", property.id)
       .order("label", { ascending: true });
@@ -91,12 +94,9 @@ export async function POST(
       .insert({
         organization_id: context.organizationId,
         property_id: property.id,
-        label: parsed.data.label,
-        unit_type: parsed.data.unitType,
-        surface_area: parsed.data.surfaceArea,
-        room_count: parsed.data.roomCount,
-        base_rent: parsed.data.baseRent,
-        charges: parsed.data.charges,
+        ...buildUnitPayload(parsed.data),
+        unit_type_v2: parsed.data.unitType,
+        category: parsed.data.category,
         status: "vacant",
       })
       .select("id")

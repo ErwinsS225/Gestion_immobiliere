@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { unitSchema } from "@/lib/validations/properties";
+import { buildUnitPayload } from "@/lib/properties/unit-payload";
 import {
   databaseErrorResponse,
   requireOrganization,
@@ -37,12 +38,9 @@ export async function PATCH(
     const { data, error } = await context.supabase
       .from("units")
       .update({
-        label: parsed.data.label,
-        unit_type: parsed.data.unitType,
-        surface_area: parsed.data.surfaceArea,
-        room_count: parsed.data.roomCount,
-        base_rent: parsed.data.baseRent,
-        charges: parsed.data.charges,
+        ...buildUnitPayload(parsed.data),
+        unit_type_v2: parsed.data.unitType,
+        category: parsed.data.category,
       })
       .eq("id", unitId)
       .eq("property_id", property.id)

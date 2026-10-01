@@ -81,13 +81,30 @@ basculer le rôle, le rôle `authenticated` n’ayant pas le droit de lire `auth
 ## Script de migration pour le SQL Editor
 
 `supabase/MIGRATION_2_A_COLLER.sql` est prêt à coller dans **Supabase → SQL Editor**.
-Il commence par un contrôle qui doit renvoyer `2` (migration 1 déjà appliquée) et se
-termine par une vérification qui doit renvoyer `9 | 33 | 14`. Le fichier est
-généré depuis la migration versionnée, qui reste la source de vérité :
+Il contient les trois migrations dans l’ordre. Le contrôle initial doit renvoyer `0`
+(base vierge) ou `2` (migration 1 déjà appliquée) ; la vérification finale doit
+renvoyer `11 | 33 | 14 | 1 | 1`. Le fichier est généré depuis les migrations
+versionnées, qui restent la source de vérité :
 
 ```bash
 python3 scripts/build_migration_script.py
 ```
+
+## Typologie des biens
+
+`lib/property-types.ts` définit 7 catégories et 47 types de biens, de `studio` à
+`parking`, en passant par `office_floor`, `warehouse` ou `villa_furnished`. Le
+formulaire des lots affiche les champs selon la catégorie : un studio ne propose
+pas de hauteur sous plafond, un entrepôt n'affiche pas de nombre de chambres.
+
+La correspondance catégorie ↔ type est imposée **en base** par la contrainte
+`units_type_matches_category` : une requête directe ou un import ne peut pas créer
+un type incohérent. La conversion depuis l'ancien enum à 5 valeurs est déjà faite
+par la migration 3 (`apartment → apartment_f2`, `office → office_single`, etc.).
+
+Les attributs peu consultés (chambres, salles de bain, vitrine, hauteur, référence
+cadastrale…) sont rangés dans la colonne `metadata` en JSONB : le schéma reste stable
+quand de nouveaux types apparaissent.
 
 
 ```

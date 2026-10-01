@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ALL_UNIT_TYPES, getCategoryFromType } from "@/lib/property-types";
 
 const optionalText = (max: number, label: string) =>
   z
@@ -101,20 +102,66 @@ const xofAmount = (label: string) =>
       .max(9_999_999_999, `${label} est trop élevé.`),
   );
 
-export const unitSchema = z.object({
-  label: z
-    .string()
-    .trim()
-    .min(1, "Le libellé du lot est obligatoire.")
-    .max(80, "Le libellé du lot ne peut pas dépasser 80 caractères."),
-  unitType: z.enum(["apartment", "shop", "office", "parking", "land"], {
-    error: "Choisissez un type de lot valide.",
-  }),
+/** Champs de surface, pièces et meublage : residential, tourisme, mixte. */
+const residentialFields = {
   surfaceArea: optionalNumber("La surface", { max: 9_999_999_999.99, decimalPlaces: 2 }),
   roomCount: optionalNumber("Le nombre de pièces", { integer: true, positive: true, max: 32_767 }),
-  baseRent: xofAmount("Le loyer de base"),
-  charges: xofAmount("Les charges"),
-});
+  bedroomCount: optionalNumber("Le nombre de chambres", { integer: true, max: 32_767 }),
+  bathroomCount: optionalNumber("Le nombre de salles de bain", { integer: true, max: 32_767 }),
+};
+
+/** Champs propres au commercial et au professionnel. */
+const commercialFields = {
+  hasDisplayWindow: z.boolean().optional().nullable(),
+  hasOpenSpace: z.boolean().optional().nullable(),
+  workstationCount: optionalNumber("Le nombre de postes", { integer: true, max: 5_000 }),
+};
+
+/** Champs propres à l'industriel et la logistique. */
+const industrialFields = {
+  ceilingHeight: optionalNumber("La hauteur sous plafond", { max: 100, decimalPlaces: 2 }),
+  hasLoadingDock: z.boolean().optional().nullable(),
+};
+
+/** Champs propres aux terrains. */
+const landFields = {
+  cadastralReference: optionalText(80, "La référence cadastrale"),
+  isServiced: z.boolean().optional().nullable(),
+};
+
+export const unitSchema = z
+  .object({
+    label: z
+      .string()
+      .trim()
+      .min(1, "Le libellé du lot est obligatoire.")
+      .max(80, "Le libellé du lot ne peut pas dépasser 80 caractères."),
+    unitType: z.enum(ALL_UNIT_TYPES as [string, ...string[]], {
+      error: "Choisissez un type de bien.",
+    }),
+    buildingSection: optionalText(40, "La designation du batiment"),
+    floor: optionalText(20, "L'etage"),
+    ...residentialFields,
+    ...commercialFields,
+    ...industrialFields,
+    ...landFields,
+    isFurnished: z.boolean().optional().nullable(),
+    depositAmount: xofAmount("Le depot de garantie"),
+    baseRent: xofAmount("Le loyer de base"),
+    charges: xofAmount("Les charges"),
+    notes: optionalText(2000, "Les notes"),
+  })
+  // La categorie n est pas saisie : elle se deduit du type. Elle est tout de
+  // meme verifiee ici pour renvoyer un message clair avant l aller-retour en
+  // base, qui refuserait de la meme facon via units_type_matches_category.
+  .transform((value) => ({
+    ...value,
+    category: getCategoryFromType(value.unitType),
+  }))
+  .refine((value) => value.baseRent > 0, {
+    path: ["baseRent"],
+    message: "Le loyer doit être supérieur à 0.",
+  });
 
 export type OwnerValues = z.infer<typeof ownerSchema>;
 export type PropertyValues = z.infer<typeof propertySchema>;

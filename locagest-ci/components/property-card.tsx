@@ -4,20 +4,13 @@ import { useState } from "react";
 import { DoorOpen, MapPin, Pencil, Plus, UserRound } from "lucide-react";
 import { PropertyForm, type PropertyOwner, type PropertyValuesForForm } from "@/components/property-form";
 import { UnitForm, type UnitValuesForForm } from "@/components/unit-form";
+import { getTypeLabel } from "@/lib/property-types";
 
 interface PropertyCardData extends PropertyValuesForForm {
   created_at: string;
   owner: Pick<PropertyOwner, "id" | "full_name" | "phone"> | null;
   units: UnitValuesForForm[];
 }
-
-const unitTypeLabels: Record<string, string> = {
-  apartment: "Appartement",
-  shop: "Magasin",
-  office: "Bureau",
-  parking: "Parking",
-  land: "Terrain",
-};
 
 const money = new Intl.NumberFormat("fr-CI", { maximumFractionDigits: 0 });
 const decimal = new Intl.NumberFormat("fr-CI", { maximumFractionDigits: 2 });
@@ -141,7 +134,7 @@ export function PropertyCard({
                     <div className="unit-record-main">
                       <strong>{unit.label}</strong>
                       <small>
-                        {unitTypeLabels[unit.unit_type] ?? unit.unit_type}
+                        {getTypeLabel(unit.unit_type_v2 ?? unit.unit_type)}
                         {unit.surface_area != null ? ` · ${decimal.format(unit.surface_area)} m²` : ""}
                         {unit.room_count != null ? ` · ${unit.room_count} pièce${unit.room_count > 1 ? "s" : ""}` : ""}
                       </small>

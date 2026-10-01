@@ -62,7 +62,9 @@ export default async function PropertiesPage() {
   const unitsResult = propertyIds.length
     ? await supabase
         .from("units")
-        .select("id, property_id, label, unit_type, surface_area, room_count, base_rent, charges, status")
+        .select(
+          "id, property_id, label, unit_type, unit_type_v2, category, surface_area, room_count, base_rent, charges, deposit_amount, floor, building_section, metadata, status",
+        )
         .eq("organization_id", membership.organization_id)
         .in("property_id", propertyIds)
         .order("label", { ascending: true })

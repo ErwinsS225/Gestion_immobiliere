@@ -1,20 +1,198 @@
 -- ===========================================================================
--- LOCAGEST CI - Migration 2 : schema metier
+-- LOCAGEST CI - Migrations 1 a 3
 -- A coller dans Supabase > SQL Editor > New query > Run
 --
--- Source de verite : supabase/migrations/20261001000100_create_business_schema.sql
+-- Sources de verite (dans l'ordre) :
+--   supabase/migrations/20261001000000_create_organization_with_owner.sql
+--   supabase/migrations/20261001000100_create_business_schema.sql
+--   supabase/migrations/20261001000200_add_property_taxonomy.sql
 --
--- Cette migration est idempotente : elle peut etre relancee sans risque.
+-- Chaque migration est idempotente : le script peut etre relance sans risque.
 --
--- ETAPE 1 - verifier que la migration 1 est deja en place.
--- Cette requete doit renvoyer 2 avant de continuer.
-select count(*) as "migrations prealables (attendu 2)"
+-- ETAPE 1 - verifier que rien n existe encore, ou que la migration 1 est posee.
+-- Cette requete doit renvoyer 0 sur une base vierge, ou 2 si la migration 1
+-- a deja ete appliquee.
+select count(*) as "migrations prealables (attendu 0 ou 2)"
 from pg_tables
 where schemaname = 'public'
   and tablename in ('organizations', 'memberships');
 
 -- ===========================================================================
 
+do $types$
+begin
+  create type public.member_role as enum ('owner', 'manager', 'viewer');
+exception
+  when duplicate_object then null;
+end;
+$types$;
+
+do $types$
+begin
+  create type public.subscription_status as enum ('trialing', 'active', 'past_due', 'cancelled');
+exception
+  when duplicate_object then null;
+end;
+$types$;
+
+create table if not exists public.organizations (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  phone text,
+  email text,
+  city text not null default 'Abidjan',
+  subscription_status public.subscription_status not null default 'trialing',
+  trial_ends_at timestamptz not null default (now() + interval '30 days'),
+  subscription_expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.memberships (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  role public.member_role not null default 'manager',
+  created_at timestamptz not null default now(),
+  unique (user_id, organization_id)
+);
+
+create index if not exists memberships_organization_user_idx
+  on public.memberships (organization_id, user_id);
+
+alter table public.organizations enable row level security;
+alter table public.memberships enable row level security;
+
+revoke all on public.organizations, public.memberships from public, anon, authenticated;
+grant select, update on public.organizations to authenticated;
+grant select on public.memberships to authenticated;
+
+create or replace function public.is_org_member(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select exists (
+    select 1
+    from public.memberships as membership
+    where membership.organization_id = p_organization_id
+      and membership.user_id = (select auth.uid())
+  );
+$function$;
+
+create or replace function public.is_org_owner(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select exists (
+    select 1
+    from public.memberships as membership
+    where membership.organization_id = p_organization_id
+      and membership.user_id = (select auth.uid())
+      and membership.role = 'owner'::public.member_role
+  );
+$function$;
+
+create or replace function public.can_write_org(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select exists (
+    select 1
+    from public.memberships as membership
+    where membership.organization_id = p_organization_id
+      and membership.user_id = (select auth.uid())
+      and membership.role in (
+        'owner'::public.member_role,
+        'manager'::public.member_role
+      )
+  );
+$function$;
+
+revoke all on function public.is_org_member(uuid) from public, anon;
+revoke all on function public.is_org_owner(uuid) from public, anon;
+revoke all on function public.can_write_org(uuid) from public, anon;
+grant execute on function public.is_org_member(uuid) to authenticated;
+grant execute on function public.is_org_owner(uuid) to authenticated;
+grant execute on function public.can_write_org(uuid) to authenticated;
+
+drop policy if exists organizations_member_select on public.organizations;
+create policy organizations_member_select
+  on public.organizations for select to authenticated
+  using (public.is_org_member(id));
+
+drop policy if exists organizations_owner_update on public.organizations;
+create policy organizations_owner_update
+  on public.organizations for update to authenticated
+  using (public.is_org_owner(id))
+  with check (public.is_org_owner(id));
+
+drop policy if exists memberships_member_select on public.memberships;
+create policy memberships_member_select
+  on public.memberships for select to authenticated
+  using (user_id = (select auth.uid()) or public.is_org_member(organization_id));
+
+create or replace function public.create_organization_with_owner(
+  p_name text,
+  p_phone text default null,
+  p_email text default null,
+  p_city text default 'Abidjan'
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_user_id uuid := auth.uid();
+  v_organization_id uuid;
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated' using errcode = '42501';
+  end if;
+
+  if p_name is null
+    or pg_catalog.length(pg_catalog.btrim(p_name)) < 2
+    or pg_catalog.length(pg_catalog.btrim(p_name)) > 120
+  then
+    raise exception 'Invalid organization name' using errcode = '22023';
+  end if;
+
+  if pg_catalog.length(coalesce(p_phone, '')) > 30
+    or pg_catalog.length(coalesce(p_email, '')) > 120
+    or pg_catalog.length(coalesce(p_city, '')) > 80
+  then
+    raise exception 'Invalid organization contact details' using errcode = '22023';
+  end if;
+
+  insert into public.organizations (name, phone, email, city)
+  values (
+    pg_catalog.btrim(p_name),
+    nullif(pg_catalog.btrim(p_phone), ''),
+    p_email,
+    coalesce(nullif(pg_catalog.btrim(p_city), ''), 'Abidjan')
+  )
+  returning id into v_organization_id;
+
+  insert into public.memberships (user_id, organization_id, role)
+  values (v_user_id, v_organization_id, 'owner'::public.member_role);
+
+  return v_organization_id;
+end;
+$function$;
+
+revoke all on function public.create_organization_with_owner(text, text, text, text)
+  from public, anon, authenticated;
+grant execute on function public.create_organization_with_owner(text, text, text, text)
+  to authenticated;
 -- Migration 2 : schema metier (patrimoine, baux, echeances, paiements).
 -- Depend de 20261001000000_create_organization_with_owner.sql
 -- (enums member_role / subscription_status, tables organizations + memberships,
@@ -836,17 +1014,295 @@ revoke all on function public.handle_new_user() from public, anon, authenticated
 grant execute on function public.set_updated_at() to authenticated;
 grant execute on function public.compute_rent_call_total() to authenticated;
 
+-- Migration 3 : typologie detaillee des biens.
+-- Depend de 20261001000100_create_business_schema.sql
+-- (table units, colonne unit_type public.unit_type, contraintes de montant).
+--
+-- Objectif : remplacer l enum unit_type a 5 valeurs par la typologie reelle
+-- d une agence ivoirienne (7 categories, 47 types), et remettre les attributs
+-- variables dans une colonne JSONB plutot que d ajouter une colonne par type.
+
+-- ---------------------------------------------------------------------------
+-- Nouvelles categories et nouveau type de lot
+-- ---------------------------------------------------------------------------
+
+do $types$
+begin
+  create type public.property_category as enum (
+    'residential',
+    'commercial',
+    'professional',
+    'industrial',
+    'tourism',
+    'mixed',
+    'land_annex'
+  );
+exception
+  when duplicate_object then null;
+end;
+$types$;
+
+do $types$
+begin
+  create type public.unit_type_v2 as enum (
+    -- residentiel
+    'studio',
+    'studio_american',
+    'apartment_f1',
+    'apartment_f2',
+    'apartment_f3',
+    'apartment_f4',
+    'apartment_f5',
+    'apartment_f6_plus',
+    'duplex',
+    'triplex',
+    'penthouse',
+    'villa_low',
+    'villa_duplex',
+    'villa_triplex',
+    'villa_twin',
+    'villa_row',
+    'house',
+    'house_compound',
+    'building_residential',
+    -- commercial
+    'shop',
+    'commercial_unit',
+    'store',
+    'showroom',
+    'kiosk',
+    'market_stall',
+    -- professionnel
+    'office_single',
+    'office_floor',
+    'building_office',
+    'cabinet',
+    'coworking',
+    'meeting_room',
+    -- industriel
+    'warehouse',
+    'hangar',
+    'workshop',
+    'factory',
+    'depot',
+    'land_industrial',
+    -- touristique
+    'apartment_furnished',
+    'villa_furnished',
+    'residence_furnished',
+    'hotel_room',
+    'guesthouse',
+    'residence_hotel',
+    -- mixte
+    'mixed_use',
+    -- terrain et annexes
+    'land',
+    'land_serviced',
+    'land_agricultural',
+    'parking',
+    'garage',
+    'storage_room'
+  );
+exception
+  when duplicate_object then null;
+end;
+$types$;
+
+-- ---------------------------------------------------------------------------
+-- Colonnes de typologie
+--
+-- Le nouveau type est stocke dans unit_type_v2 et non dans unit_type : la
+-- colonne d'origine est conservee pour la compatibilite et pourra etre
+-- supprimee lorsque plus aucun code ne la lit.
+-- ---------------------------------------------------------------------------
+
+alter table public.units
+  add column if not exists category text not null default 'residential',
+  add column if not exists metadata jsonb not null default '{}'::jsonb,
+  add column if not exists deposit_amount numeric(12, 2) not null default 0,
+  add column if not exists building_section text,
+  add column if not exists floor text,
+  add column if not exists unit_type_v2 public.unit_type_v2;
+
+-- Conversion des 5 anciennes valeurs vers la nouvelle typologie.
+--
+-- apartment -> apartment_f2 : l ancien type ne distinguait pas le nombre de
+--   pieces. F2 est le cas le plus courant a Abidjan et le defaut du
+--   formulaire actuel, ce qui evite une regression visible.
+-- shop     -> shop
+-- office   -> office_single
+-- parking  -> parking
+-- land     -> land
+--
+-- La colonne est vide juste apres sa creation. Si la migration est relansee
+-- apres une execution partielle, certaines lignes peuvent porter deja une
+-- valeur : la condition porte donc sur la coherence avec l ancien type, pas
+-- seulement sur un NULL, sinon une ligne restee a defaut ne serait jamais
+-- corrigee.
+
+update public.units set unit_type_v2 = case unit_type::text
+  when 'apartment' then 'apartment_f2'::public.unit_type_v2
+  when 'shop'     then 'shop'::public.unit_type_v2
+  when 'office'   then 'office_single'::public.unit_type_v2
+  when 'parking'  then 'parking'::public.unit_type_v2
+  when 'land'     then 'land'::public.unit_type_v2
+  else 'apartment_f2'::public.unit_type_v2
+end
+where unit_type_v2 is null
+   or unit_type_v2::text <> case unit_type::text
+        when 'apartment' then 'apartment_f2'
+        when 'shop'     then 'shop'
+        when 'office'   then 'office_single'
+        when 'parking'  then 'parking'
+        when 'land'     then 'land'
+        else 'apartment_f2'
+      end;
+
+alter table public.units
+  alter column unit_type_v2 set default 'apartment_f2',
+  alter column unit_type_v2 set not null;
+
+-- ---------------------------------------------------------------------------
+-- Integrite categorie / type
+--
+-- La correspondance est imposee en base et pas seulement dans le formulaire,
+-- donc une requete directe ou un import ne peut pas creer un type incoherent
+-- avec sa categorie.
+-- ---------------------------------------------------------------------------
+
+-- Les contraintes sont posees de facon conditionnelle : la migration doit
+-- pouvoir etre relancee apres une execution partielle.
+
+do $constraints$
+begin
+  alter table public.units
+    add constraint units_category_allowed check (
+      category in (
+        'residential',
+        'commercial',
+        'professional',
+        'industrial',
+        'tourism',
+        'mixed',
+        'land_annex'
+      )
+    );
+exception
+  when duplicate_object then null;
+end;
+$constraints$;
+
+create or replace function public.unit_type_matches_category(
+  p_type public.unit_type_v2,
+  p_category text
+)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $function$
+  select case p_category
+    when 'residential' then p_type::text in (
+      'studio', 'studio_american', 'apartment_f1', 'apartment_f2', 'apartment_f3',
+      'apartment_f4', 'apartment_f5', 'apartment_f6_plus', 'duplex', 'triplex',
+      'penthouse', 'villa_low', 'villa_duplex', 'villa_triplex', 'villa_twin',
+      'villa_row', 'house', 'house_compound', 'building_residential')
+    when 'commercial' then p_type::text in (
+      'shop', 'commercial_unit', 'store', 'showroom', 'kiosk', 'market_stall')
+    when 'professional' then p_type::text in (
+      'office_single', 'office_floor', 'building_office', 'cabinet',
+      'coworking', 'meeting_room')
+    when 'industrial' then p_type::text in (
+      'warehouse', 'hangar', 'workshop', 'factory', 'depot', 'land_industrial')
+    when 'tourism' then p_type::text in (
+      'apartment_furnished', 'villa_furnished', 'residence_furnished',
+      'hotel_room', 'guesthouse', 'residence_hotel')
+    when 'mixed' then p_type::text in ('mixed_use')
+    when 'land_annex' then p_type::text in (
+      'land', 'land_serviced', 'land_agricultural', 'parking', 'garage', 'storage_room')
+    else false
+  end;
+$function$;
+
+revoke all on function public.unit_type_matches_category(public.unit_type_v2, text)
+  from public, anon;
+
+-- La categorie se deduit du type pour les lots converts : sans cela la
+-- contrainte croisable ci-dessous rejetterait les lignes existantes, dont la
+-- categorie par defaut residential ne correspond pas a un bureau ou un parking.
+
+update public.units unit
+set category = case
+  when unit.unit_type_v2::text in (
+    'shop', 'commercial_unit', 'store', 'showroom', 'kiosk', 'market_stall')
+    then 'commercial'
+  when unit.unit_type_v2::text in (
+    'office_single', 'office_floor', 'building_office', 'cabinet',
+    'coworking', 'meeting_room')
+    then 'professional'
+  when unit.unit_type_v2::text in (
+    'warehouse', 'hangar', 'workshop', 'factory', 'depot', 'land_industrial')
+    then 'industrial'
+  when unit.unit_type_v2::text in (
+    'apartment_furnished', 'villa_furnished', 'residence_furnished',
+    'hotel_room', 'guesthouse', 'residence_hotel')
+    then 'tourism'
+  when unit.unit_type_v2::text = 'mixed_use'
+    then 'mixed'
+  when unit.unit_type_v2::text in (
+    'land', 'land_serviced', 'land_agricultural', 'parking', 'garage', 'storage_room')
+    then 'land_annex'
+  else 'residential'
+end
+where not public.unit_type_matches_category(unit.unit_type_v2, unit.category);
+
+do $constraints$
+begin
+  alter table public.units
+    add constraint units_type_matches_category check (
+      public.unit_type_matches_category(unit_type_v2, category)
+    );
+exception
+  when duplicate_object then null;
+end;
+$constraints$;
+
+-- ---------------------------------------------------------------------------
+-- Index de consultation et montant de garantie
+-- ---------------------------------------------------------------------------
+
+create index if not exists units_category_idx
+  on public.units (organization_id, category);
+
+create index if not exists units_type_v2_idx
+  on public.units (organization_id, unit_type_v2);
+
+create index if not exists units_property_status_idx
+  on public.units (property_id, status);
+
+do $constraints$
+begin
+  alter table public.units
+    add constraint units_deposit_non_negative check (deposit_amount >= 0);
+exception
+  when duplicate_object then null;
+end;
+$constraints$;
+
 
 -- ===========================================================================
 -- VERIFICATION : a lancer apres la migration
--- Resultat attendu :  9 | 33 | 14
+-- Resultat attendu :  11 | 33 | 14   puis   47 | 1
+-- soit 11 tables, 33 policies, 14 triggers, 47 types de bien, 1 contrainte
+-- de correspondance categorie / type.
 -- ===========================================================================
 select
-  (select count(*) from pg_tables
-    where schemaname = 'public'
-      and tablename in ('profiles','owners','properties','units','tenants',
-                        'leases','rent_calls','payments','subscription_payments'))
+  (select count(*) from pg_tables where schemaname = 'public')
   || ' | ' || (select count(*) from pg_policies where schemaname = 'public')
   || ' | ' || (select count(*) from information_schema.triggers
                 where trigger_schema = 'public')
-  as "tables | policies | triggers (attendu 9 | 33 | 14)";
+  || ' | ' || (select count(*) from pg_type
+                where typname = 'unit_type_v2')
+  || ' | ' || (select count(*) from pg_constraint
+                where conname = 'units_type_matches_category')
+  as "verif";
