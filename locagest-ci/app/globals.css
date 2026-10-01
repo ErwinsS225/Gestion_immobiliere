@@ -2073,6 +2073,233 @@ a {
   resize: vertical;
 }
 
+/* ---------------------------------------------------------------------------
+   Inventaire du mobilier et etat des lieux
+   --------------------------------------------------------------------------- */
+
+.inventory-panel,
+.inspection-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.inventory-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #f0d9a8;
+  border-radius: 10px;
+  background: #fdf6e6;
+  color: #7a5a12;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.inventory-warning svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.inventory-empty {
+  margin: 0;
+  color: #748078;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.inventory-add {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e4eae4;
+  border-radius: 12px;
+  background: #fafbf9;
+}
+
+.inventory-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.inventory-group-title {
+  margin: 0 0 7px;
+  color: #45574a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.inventory-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inventory-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e4eae4;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.inventory-row-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.inventory-row-main strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.inventory-qty {
+  margin-left: 6px;
+  color: #748078;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.inventory-note {
+  color: #6b766d;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Pastille d etat : la couleur seule ne suffit pas, le libelle est toujours
+   affiche, ce qui reste lisible en contraste eleve. */
+.condition-chip {
+  justify-self: start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.condition-success {
+  background: #e4f2e6;
+  color: #1d6134;
+}
+
+.condition-warning {
+  background: #fdf0d5;
+  color: #7a5a12;
+}
+
+.condition-danger {
+  background: #fbe4e0;
+  color: #96331f;
+}
+
+.condition-neutral {
+  background: #eceeec;
+  color: #4d574f;
+}
+
+.condition-info {
+  background: #e2ecf7;
+  color: #1d4c78;
+}
+
+.condition-select {
+  max-width: 148px;
+  padding: 7px 9px;
+  border: 1px solid #dbe4d8;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border: 1px solid #e4eae4;
+  border-radius: 8px;
+  background: #fff;
+  color: #748078;
+  cursor: pointer;
+}
+
+.icon-button:hover:not(:disabled) {
+  border-color: #d9b3aa;
+  color: #96331f;
+}
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inspection-meter-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #45574a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.inspection-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.inspection-room {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e4eae4;
+  border-radius: 12px;
+  background: #fafbf9;
+}
+
+.inspection-room legend {
+  padding: 0 6px;
+  color: #45574a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.inspection-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspection-element {
+  flex: 1 1 128px;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.inspection-note-input {
+  flex: 1 1 100%;
+  padding: 7px 9px;
+  border: 1px solid #e0c48a;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 12px;
+}
+
 .property-no-units {
   display: grid;
   justify-items: start;

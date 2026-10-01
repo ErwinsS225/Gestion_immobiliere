@@ -117,4 +117,175 @@ select set_config('request.jwt.claim.sub', :'konan_id', true);
 delete from public.properties;
 rollback;
 
+-- Inventaire du mobilier et etat des lieux : deux tables attachees a un bail,
+-- donc isolation par organisation comme le reste du schema metier.
+-- Les donnees sont purgees en tete : le test reste rejouable.
+--
+-- Ce fichier doit pouvoir tourner seul : il cree donc son propre bien, lot et
+-- bail pour Konan, absents du fichier de regles metier.
+
+delete from public.inspection_items;
+delete from public.inspection_reports;
+delete from public.inventory_items;
+delete from public.inventory_catalog where organization_id is not null;
+
+insert into public.properties (organization_id, name, commune)
+select id, 'Immeuble Konan', 'Koumassi'
+from public.organizations
+where name = 'Agence Konan' and not exists (
+  select 1 from public.properties p where p.name = 'Immeuble Konan'
+);
+
+insert into public.units (organization_id, property_id, label, unit_type_v2, category)
+select p.organization_id, p.id, 'Apt 1', 'apartment_f2', 'residential'
+from public.properties p
+where p.name = 'Immeuble Konan'
+  and not exists (select 1 from public.units u where u.label = 'Apt 1');
+
+insert into public.tenants (organization_id, full_name, phone)
+select id, 'M. Kouassi', '+225 05 22 22 22 22'
+from public.organizations
+where name = 'Agence Konan' and not exists (
+  select 1 from public.tenants t where t.full_name = 'M. Kouassi'
+);
+
+insert into public.leases (organization_id, unit_id, tenant_id, start_date, rent_amount)
+select p.organization_id, u.id, t.id, date '2026-01-01', 150000
+from public.properties p
+join public.units u on u.property_id = p.id
+join public.tenants t on t.full_name = 'M. Kouassi'
+where p.name = 'Immeuble Konan'
+  and not exists (
+    select 1 from public.leases l where l.unit_id = u.id and l.status = 'active'
+  );
+
+-- Un objet et un etat des lieux pour Konan
+
+insert into public.inventory_items (organization_id, lease_id, name, category, condition, quantity)
+select l.organization_id, l.id, 'Refrigerateur', 'Cuisine', 'good', 1
+from public.leases l
+where l.organization_id = (
+  select id from public.organizations where name = 'Agence Konan'
+);
+
+insert into public.inspection_reports (organization_id, lease_id, type, inspection_date)
+select l.organization_id, l.id, 'move_in', date '2026-01-01'
+from public.leases l
+where l.organization_id = (
+  select id from public.organizations where name = 'Agence Konan'
+);
+
+insert into public.inspection_items (report_id, organization_id, room, element, condition)
+select r.id, r.organization_id, 'Cuisine', 'Sol', 'good'
+from public.inspection_reports r;
+
+select (select id from auth.users where email = 'konan@test.ci')::text as konan_id \gset
+
+\echo '--- TEST 20 : Konan voit son inventaire ---'
+begin;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', :'konan_id', true);
+select
+  case when count(*) = 1 then 'OK Konan voit son objet'
+       else 'ECHEC vu ' || count(*)::text end as resultat
+from public.inventory_items;
+rollback;
+
+\echo '--- TEST 21 : Konan ne voit pas les objets d une autre agence ---'
+-- L autre agence a besoin de son propre bien et de son propre lot : un bien
+-- appartient a une seule organisation.
+insert into public.properties (organization_id, name, commune)
+select id, 'Immeuble Yeture', 'Yopougon'
+from public.organizations
+where name = 'Agence Yeture' and not exists (
+  select 1 from public.properties p where p.name = 'Immeuble Yeture'
+);
+
+insert into public.units (organization_id, property_id, label, unit_type_v2, category)
+select p.organization_id, p.id, 'Apt 2', 'apartment_f2', 'residential'
+from public.properties p
+where p.name = 'Immeuble Yeture'
+  and not exists (select 1 from public.units u where u.label = 'Apt 2');
+
+insert into public.leases (organization_id, unit_id, tenant_id, start_date, rent_amount)
+select p.organization_id, u.id, t.id, date '2026-01-01', 120000
+from public.properties p
+join public.units u on u.property_id = p.id
+join public.tenants t on t.full_name = 'M. Kouassi'
+where p.name = 'Immeuble Yeture'
+  and not exists (
+    select 1 from public.leases l where l.unit_id = u.id and l.status = 'active'
+  );
+
+insert into public.inventory_items (organization_id, lease_id, name, condition)
+select l.organization_id, l.id, 'Television', 'good'
+from public.leases l
+where l.organization_id = (select id from public.organizations where name = 'Agence Yeture');
+
+begin;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', :'konan_id', true);
+select
+  case when count(*) = 1 then 'OK Konan ne voit que son objet'
+       else 'ECHEC fuite : ' || count(*)::text end as resultat
+from public.inventory_items;
+rollback;
+
+\echo '=== TESTS INVENTAIRE (suite) ==='
+
+\echo '--- TEST 22 : ecriture croisee bloquee (INSERT 0 0 attendu) ---'
+begin;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', :'konan_id', true);
+insert into public.inventory_items (organization_id, lease_id, name)
+select l2.organization_id, l2.id, 'Objet pirate'
+from public.leases l2
+where l2.organization_id <> (
+  select organization_id from public.inventory_items limit 1
+)
+limit 1;
+rollback;
+
+\echo '--- TEST 23 : le catalogue systeme est lisible par tous ---'
+begin;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', :'konan_id', true);
+select 'catalogue visible : ' || count(*)::text || ' objets' from public.inventory_catalog;
+rollback;
+
+\echo '--- TEST 24 : le catalogue systeme ne peut pas etre ecrit ---'
+begin;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', :'konan_id', true);
+insert into public.inventory_catalog (organization_id, category, name)
+select organization_id, 'Cuisine', 'Objet systeme interdit'
+from public.inventory_catalog
+where organization_id is not null
+limit 1;
+rollback;
+
+\echo '--- TEST 25 : le catalogue de son agence s ecrit ---'
+insert into public.inventory_catalog (organization_id, category, name)
+select organization_id, 'Cuisine', 'Machine a popcorn'
+from public.memberships
+where user_id = (select id from auth.users where email = 'konan@test.ci')
+limit 1;
+
+select
+  case when count(*) = 1 then 'OK objet propre enregistre'
+       else 'ECHEC ' || count(*)::text end as resultat
+from public.inventory_catalog where name = 'Machine a popcorn';
+
+\echo '--- TEST 26 : rejeu du catalogue sans doublon ---'
+insert into public.inventory_catalog (organization_id, category, name)
+select organization_id, 'Cuisine', 'Machine a popcorn'
+from public.memberships
+where user_id = (select id from auth.users where email = 'konan@test.ci')
+limit 1;
+
+select
+  case when count(*) = 1 then 'OK pas de doublon'
+       else 'ECHEC ' || count(*)::text || ' lignes' end as resultat
+from public.inventory_catalog where name = 'Machine a popcorn';
+
 \echo '=== TESTS TERMINES ==='
