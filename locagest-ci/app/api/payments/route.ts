@@ -3,7 +3,6 @@ import {
   databaseErrorResponse,
   readJson,
   requireOrganization,
-  serviceUnavailable,
 } from "@/lib/leases/lease-context";
 import { validationErrorResponse } from "@/lib/supabase/organization-context";
 import { demanderPaiement } from "@/lib/payments/gateway";

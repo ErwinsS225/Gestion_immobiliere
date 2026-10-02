@@ -2144,6 +2144,9 @@ a {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  /* flex-wrap : la modale de reglement occupe toute la largeur de la ligne,
+     au lieu d etre ecrasee contre le libelle du mois. */
+  flex-wrap: wrap;
   gap: 12px;
   padding: 10px 12px;
   border: 1px solid #e4eae4;
@@ -2310,6 +2313,44 @@ a {
 
 .tenant-actions .icon-button {
   text-decoration: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Reglement sur une echeance
+   --------------------------------------------------------------------------- */
+
+/* Le formulaire s insere dans la ligne de l echeance et occupe toute sa largeur :
+   sur mobile, l agent le voit sans deplacer la liste. */
+.payment-add {
+  display: grid;
+  gap: 11px;
+  flex: 1 1 100%;
+  margin-top: 9px;
+  padding: 13px;
+  border: 1px solid #d7e2d4;
+  border-radius: 11px;
+  background: #fafbf9;
+}
+
+/* En simulation, l agent doit savoir qu aucun argent ne bouge avant de saisir :
+   l information est posee avant les champs, pas en avertissement tardif. */
+.payment-simulation-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #c9dce8;
+  border-radius: 9px;
+  background: #eef5fa;
+  color: #1d4c78;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.payment-simulation-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
 }
 
 /* ---------------------------------------------------------------------------

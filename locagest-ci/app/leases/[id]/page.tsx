@@ -4,13 +4,13 @@ import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft,
   CircleAlert,
-  DoorOpen,
   FileText,
   Home,
   MessageCircle,
   Phone,
 } from "lucide-react";
 import { InspectionForm } from "@/components/inspection-form";
+import { RentCallTracker } from "@/components/rent-call-tracker";
 import { LeaseInventory, type CatalogItem, type InventoryItem } from "@/components/lease-inventory";
 import { getTypeLabel } from "@/lib/property-types";
 import { formatDateFr, formatFCFA, paymentDayLabel } from "@/lib/lease-utils";
@@ -20,20 +20,6 @@ import { getInspectionTypeLabel } from "@/lib/inventory-types";
 export const metadata: Metadata = { title: "Fiche du bail" };
 
 /** Classe visuelle du statut d'une échéance. */
-const STATUT_STYLE: Record<string, string> = {
-  paid: "condition-success",
-  pending: "condition-neutral",
-  partial: "condition-warning",
-  overdue: "condition-danger",
-};
-
-const STATUT_LABEL: Record<string, string> = {
-  paid: "Payée",
-  pending: "En attente",
-  partial: "Partielle",
-  overdue: "En retard",
-};
-
 export default async function LeaseDetailPage({
   params,
 }: {
@@ -150,9 +136,6 @@ export default async function LeaseDetailPage({
   }>;
 
   const mensuel = Number(bail.rent_amount) + Number(bail.charges_amount);
-  const attenduTotal = echeances.reduce((somme, ligne) => somme + Number(ligne.total_amount), 0);
-  const encaisseTotal = echeances.reduce((somme, ligne) => somme + Number(ligne.amount_paid), 0);
-  const enRetard = echeances.filter((ligne) => ligne.status === "overdue").length;
   const telephone = bail.tenant?.phone ?? "";
   const whatsapp = bail.tenant?.whatsapp ?? null;
 
@@ -262,82 +245,7 @@ export default async function LeaseDetailPage({
           </div>
         </section>
 
-        <section className="properties-panel property-overview-panel">
-          <div className="panel-header">
-            <div>
-              <p className="dashboard-eyebrow">Suivi</p>
-              <h2>Échéances</h2>
-            </div>
-            {echeances.length > 0 ? (
-              <span className="pill-badge">
-                {echeances.length} échéance{echeances.length > 1 ? "s" : ""}
-                {enRetard > 0 ? ` · ${enRetard} en retard` : ""}
-              </span>
-            ) : null}
-          </div>
-
-          {echeancesResult.error ? (
-            <div className="empty-state empty-state-error">
-              <CircleAlert size={22} aria-hidden="true" />
-              <p>Impossible de charger les échéances de ce bail.</p>
-            </div>
-          ) : echeances.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">
-                <DoorOpen size={20} aria-hidden="true" />
-              </div>
-              <p>Aucune échéance enregistrée.</p>
-              <span>
-                La première échéance est créée à la signature du bail ; le calendrier
-                mensuel prend le relais ensuite.
-              </span>
-            </div>
-          ) : (
-            <>
-              <div className="lease-totals">
-                <div>
-                  <span>Attendu</span>
-                  <strong>{formatFCFA(attenduTotal)}</strong>
-                </div>
-                <div>
-                  <span>Encaissé</span>
-                  <strong>{formatFCFA(encaisseTotal)}</strong>
-                </div>
-                <div>
-                  <span>Reste à encaisser</span>
-                  <strong>{formatFCFA(Math.max(0, attenduTotal - encaisseTotal))}</strong>
-                </div>
-              </div>
-              <ul className="inventory-list">
-                {echeances.map((ligne) => (
-                  <li key={ligne.id} className="inventory-row">
-                    <div className="inventory-row-main">
-                      <strong>
-                        {String(ligne.period_month).padStart(2, "0")}/{ligne.period_year}
-                      </strong>
-                      <small className="inventory-note">
-                        Échéance le {formatDateFr(ligne.due_date)}
-                      </small>
-                    </div>
-                    <div className="inventory-row-end">
-                      <span
-                        className={`condition-chip ${
-                          STATUT_STYLE[ligne.status] ?? "condition-neutral"
-                        }`}
-                      >
-                        {STATUT_LABEL[ligne.status] ?? ligne.status}
-                      </span>
-                      <strong className="unit-price">
-                        {formatFCFA(Number(ligne.amount_paid))}
-                        <span> / {formatFCFA(Number(ligne.total_amount))}</span>
-                      </strong>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
+        <RentCallTracker rentCalls={echeances} />
 
         {rapports.length > 0 ? (
           <section className="properties-panel property-overview-panel">

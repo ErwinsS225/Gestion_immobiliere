@@ -43,19 +43,26 @@ export const paymentSchema = z
       .optional()
       .nullable()
       .transform((value) => value || null),
-    /** Motif d'un éventuel rejet d'opération. */
+    /**
+     * Motif d'un éventuel rejet d'opération.
+     *
+     * Le champ n'est pas transformé en chaîne vide : une saisie vide reste
+     * visible et déclenche le message, au lieu de disparaître silencieusement.
+     */
     rejectionReason: z
       .string()
       .trim()
       .max(200, "Le motif ne peut pas dépasser 200 caractères.")
       .optional()
-      .nullable()
-      .transform((value) => value || null),
+      .nullable(),
   })
-  .refine((value) => value.rejectionReason == null || value.rejectionReason.length > 0, {
-    path: ["rejectionReason"],
-    message: "Indiquez le motif du rejet.",
-  });
+  .refine(
+    (value) => value.rejectionReason == null || value.rejectionReason.length > 0,
+    {
+      path: ["rejectionReason"],
+      message: "Indiquez le motif du rejet.",
+    },
+  );
 
 export type PaymentValues = z.infer<typeof paymentSchema>;
 
