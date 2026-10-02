@@ -68,16 +68,12 @@ select ctx.org_id, (select id from public.leases limit 1), 2026, 3,
   (current_date + 20), 150000, 10000
 from ctx;
 
-select
-  case when total_amount = 160000 then 'OK total=160000'
-       else 'ECHEC total=' || total_amount end as resultat
+select public.assert_vrai('le total de l echeance est calcule', total_amount = 160000)
 from public.rent_calls;
 
 \echo '--- TEST 2 : aucun paiement -> pending ---'
-select
-  case when status = 'pending' and amount_paid = 0
-    then 'OK pending / amount_paid=0'
-    else 'ECHEC ' || status || ' / ' || amount_paid end as resultat
+select public.assert_vrai('aucun paiement laisse l echeance en attente',
+  status = 'pending' and amount_paid = 0)
 from public.rent_calls;
 
 \echo '--- TEST 3 : paiement partiel sur echeance NON echue -> partial ---'
@@ -87,10 +83,8 @@ insert into public.payments (organization_id, rent_call_id, amount, method)
 select c.org_id, rc.id, 60000, 'wave' from public.rent_calls rc, ctx c
 where rc.period_month = 3;
 
-select
-  case when status = 'partial' and amount_paid = 60000
-    then 'OK partial / amount_paid=60000'
-    else 'ECHEC ' || status || ' / ' || amount_paid end as resultat
+select public.assert_vrai('un reglement partiel donne le statut partial',
+  status = 'partial' and amount_paid = 60000)
 from public.rent_calls where period_month = 3;
 
 \echo '--- TEST 4 : solde -> paid ---'
@@ -98,10 +92,8 @@ insert into public.payments (organization_id, rent_call_id, amount, method)
 select c.org_id, rc.id, 100000, 'cash' from public.rent_calls rc, ctx c
 where rc.period_month = 3;
 
-select
-  case when status = 'paid' and amount_paid = 160000
-    then 'OK paid / amount_paid=160000'
-    else 'ECHEC ' || status || ' / ' || amount_paid end as resultat
+select public.assert_vrai('l echeance est soldee au montant exact',
+  status = 'paid' and amount_paid = 160000)
 from public.rent_calls where period_month = 3;
 
 \echo '--- TEST 5 : surpaiement reste paid (montant > total) ---'
@@ -109,20 +101,16 @@ insert into public.payments (organization_id, rent_call_id, amount, method)
 select c.org_id, rc.id, 10000, 'cash' from public.rent_calls rc, ctx c
 where rc.period_month = 3;
 
-select
-  case when status = 'paid' and amount_paid = 170000
-    then 'OK paid / amount_paid=170000'
-    else 'ECHEC ' || status || ' / ' || amount_paid end as resultat
+select public.assert_vrai('un exces de paiement solde aussi l echeance',
+  status = 'paid' and amount_paid = 170000)
 from public.rent_calls where period_month = 3;
 
 \echo '--- TEST 6 : suppression des paiements -> retour a pending ---'
 delete from public.payments
 where rent_call_id = (select id from public.rent_calls where period_month = 3);
 
-select
-  case when status = 'pending' and amount_paid = 0
-    then 'OK retour a pending / amount_paid=0'
-    else 'ECHEC ' || status || ' / ' || amount_paid end as resultat
+select public.assert_vrai('une annulation ramene l echeance en attente',
+  status = 'pending' and amount_paid = 0)
 from public.rent_calls where period_month = 3;
 
 \echo '--- TEST 7 : mark_overdue_rent_calls bascule les echeances non soldee ---'
@@ -135,10 +123,8 @@ select 'avant cron : ' || status as etat from public.rent_calls where period_mon
 
 select 'echeances basculees = ' || public.mark_overdue_rent_calls() as resultat;
 
-select
-  case when status = 'overdue'
-    then 'OK echeance echue de 10 jours -> overdue'
-    else 'ECHEC ' || status end as resultat
+select public.assert_vrai('une echeance echue de 10 jours passe en retard',
+  status = 'overdue')
 from public.rent_calls where period_month = 1;
 
 \echo '--- TEST 8 : le cron ne degrade pas une echeance soldee ---'
@@ -157,10 +143,8 @@ from public.rent_calls where period_month = 3;
 
 select 'echeances basculees au 2e cron = ' || public.mark_overdue_rent_calls() as resultat;
 
-select
-  case when status = 'paid'
-    then 'OK echeance soldee non degradee en overdue'
-    else 'ECHEC degradee en ' || status end as resultat
+select public.assert_vrai('une echeance soldee n est pas degradee en retard',
+  status = 'paid')
 from public.rent_calls where period_month = 3;
 
 \echo '--- TEST 9 : un lot ne peut avoir qu un seul bail actif ---'
@@ -195,7 +179,5 @@ end;
 $$;
 
 \echo '--- TEST 12 : profil cree automatiquement a l inscription ---'
-select
-  case when count(*) = 1 then 'OK profil cree par trigger'
-       else 'ECHEC ' || count(*) || ' profil(s)' end as resultat
+select public.assert_compte('profil cree par le trigger', count(*), 1::bigint)
 from public.profiles;

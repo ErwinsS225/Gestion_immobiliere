@@ -4,14 +4,31 @@
 -- l encaisse : une operation rejetee par l operateur ne doit jamais diminuer le
 -- total encaisse d une somme qui n a jamais ete recue.
 
-delete from public.payments;
-delete from public.rent_calls;
-delete from public.leases;
-delete from public.units where property_id in (
-  select id from public.properties where name = 'Immeuble Reglement'
+-- Nettoyage limite a ce que cette suite possede.
+--
+-- Un nettoyage global (delete from public.leases) detruirait aussi les baux
+-- crees par les autres suites : le scenario Konan de rls_isolation n existait
+-- alors plus, et ses assertions echouaient sur une absence de donnee sans
+-- rapport avec l isolation. Les suppressions suivent l ordre des dependances,
+-- des paiements jusqu aux lots.
+delete from public.payments where organization_id in (
+  select id from public.organizations where name = 'Agence Reglement'
 );
-delete from public.properties where name = 'Immeuble Reglement';
-delete from public.tenants where full_name = 'M. Reglement';
+delete from public.rent_calls where organization_id in (
+  select id from public.organizations where name = 'Agence Reglement'
+);
+delete from public.leases where organization_id in (
+  select id from public.organizations where name = 'Agence Reglement'
+);
+delete from public.units where organization_id in (
+  select id from public.organizations where name = 'Agence Reglement'
+);
+delete from public.properties where organization_id in (
+  select id from public.organizations where name = 'Agence Reglement'
+);
+delete from public.tenants where organization_id in (
+  select id from public.organizations where name = 'Agence Reglement'
+);
 delete from public.organizations where name = 'Agence Reglement';
 delete from auth.users where email = 'reglement@test.ci';
 
@@ -51,57 +68,98 @@ where l.start_date = date '2026-10-01';
 -- detruit les tables temporaires de la session.
 
 \echo '--- TEST 36 : un reglement simule est confirme et solde l echeance ---'
+-- Le select cible une seule organisation : sans cette limite, la reference
+-- unique du paiement etait repetee sur chaque agence et l insertion echouait
+-- a tort sur une contrainte d unicite.
 insert into public.payments (organization_id, rent_call_id, amount, method, reference, status)
 select o.id, (select id from public.rent_calls limit 1), 160000, 'wave',
        'WVW-20261015-4127', 'confirmed'
 from public.organizations o
-where exists (select 1 from public.rent_calls);
+where exists (select 1 from public.rent_calls)
+order by o.name
+limit 1;
 
-select
-  case when status = 'paid' and amount_paid = 160000
-    then 'OK echeance soldee par un reglement confirme'
-    else 'ECHEC ' || status || ' / ' || amount_paid end as resultat
+select public.assert_vrai('echeance soldee par un reglement confirme',
+  status = 'paid' and amount_paid = 160000)
 from public.rent_calls;
 
 \echo '--- TEST 37 : un rejet sans motif est refuse ---'
-insert into public.payments (organization_id, rent_call_id, amount, method, reference, status, rejection_reason)
-select o.id, (select id from public.rent_calls limit 1), 0, 'wave',
-       'WVW-20261015-4128', 'rejected', null
-from public.organizations o
-where exists (select 1 from public.rent_calls);
+-- Bloc negatif : la contrainte exige un motif sur un rejet. Si l insertion
+-- reussit, le bloc leve au lieu de laisser passer une donnee invalide.
+do $$
+begin
+  insert into public.payments
+    (organization_id, rent_call_id, amount, method, reference, status, rejection_reason)
+  select o.id, (select id from public.rent_calls limit 1), 0, 'wave',
+         'WVW-20261015-4128', 'rejected', null
+  from public.organizations o
+  where exists (select 1 from public.rent_calls)
+  order by o.name
+  limit 1;
+
+  raise exception 'rejet sans motif accepte : la contrainte ne fonctionne pas';
+exception
+  when check_violation then
+    raise notice 'OK : rejet sans motif rejete';
+end;
+$$;
 
 \echo '--- TEST 38 : un rejet porte un motif ---'
+-- Une seule organisation, comme en TEST 36 : la reference etant unique, la
+-- repeter sur chaque agence faisait echouer l insertion.
 insert into public.payments (organization_id, rent_call_id, amount, method, reference, status, rejection_reason)
 select o.id, (select id from public.rent_calls limit 1), 0, 'wave',
        'WVW-20261015-4128', 'rejected', 'Fonds insuffisants'
 from public.organizations o
-where exists (select 1 from public.rent_calls);
+where exists (select 1 from public.rent_calls)
+order by o.name
+limit 1;
 
-select
-  case when count(*) = 1 then 'OK rejet enregistre'
-       else 'ECHEC ' || count(*)::text end as resultat
+select public.assert_compte('rejet enregistre', count(*), 1::bigint)
 from public.payments where status = 'rejected' and amount = 0;
 
 \echo '--- TEST 39 : un rejet ne diminue PAS l encaisse ---'
-select
-  case when amount_paid = 160000 and status = 'paid'
-    then 'OK encaisse inchangee apres rejet'
-    else 'ECHEC encaisse = ' || amount_paid || ' / ' || status end as resultat
+select public.assert_vrai('encaisse inchangee apres rejet',
+  amount_paid = 160000 and status = 'paid')
 from public.rent_calls;
 
 \echo '--- TEST 40 : une reference mal formee est refusee ---'
-insert into public.payments (organization_id, rent_call_id, amount, method, reference, status)
-select o.id, (select id from public.rent_calls limit 1), 1000, 'wave',
-       'pas-une-reference', 'confirmed'
-from public.organizations o
-where exists (select 1 from public.rent_calls);
+do $$
+begin
+  insert into public.payments
+    (organization_id, rent_call_id, amount, method, reference, status)
+  select o.id, (select id from public.rent_calls limit 1), 1000, 'wave',
+         'pas-une-reference', 'confirmed'
+  from public.organizations o
+  where exists (select 1 from public.rent_calls)
+  order by o.name
+  limit 1;
+
+  raise exception 'reference mal formee acceptee : le controle ne fonctionne pas';
+exception
+  when check_violation then
+    raise notice 'OK : reference mal formee rejetee';
+end;
+$$;
 
 \echo '--- TEST 41 : une reference en doublon est refusee ---'
-insert into public.payments (organization_id, rent_call_id, amount, method, reference, status)
-select o.id, (select id from public.rent_calls limit 1), 1000, 'wave',
-       'WVW-20261015-4127', 'confirmed'
-from public.organizations o
-where exists (select 1 from public.rent_calls);
+do $$
+begin
+  insert into public.payments
+    (organization_id, rent_call_id, amount, method, reference, status)
+  select o.id, (select id from public.rent_calls limit 1), 1000, 'wave',
+         'WVW-20261015-4127', 'confirmed'
+  from public.organizations o
+  where exists (select 1 from public.rent_calls)
+  order by o.name
+  limit 1;
+
+  raise exception 'reference en doublon acceptee : l unicite ne fonctionne pas';
+exception
+  when unique_violation then
+    raise notice 'OK : reference en doublon rejetee';
+end;
+$$;
 
 \echo '--- TEST 42 : une operation en attente ne compte pas dans l encaisse ---'
 delete from public.payments where status = 'confirmed';
@@ -110,21 +168,19 @@ insert into public.payments (organization_id, rent_call_id, amount, method, refe
 select o.id, (select id from public.rent_calls limit 1), 160000, 'wave',
        'ORM-20261015-4130', 'pending'
 from public.organizations o
-where exists (select 1 from public.rent_calls);
+where exists (select 1 from public.rent_calls)
+order by o.name
+limit 1;
 
-select
-  case when amount_paid = 0 and status = 'pending'
-    then 'OK une operation en attente ne solde pas l echeance'
-    else 'ECHEC encaisse = ' || amount_paid || ' / ' || status end as resultat
+select public.assert_vrai('une operation en attente ne solde pas l echeance',
+  amount_paid = 0 and status = 'pending')
 from public.rent_calls;
 
 \echo '--- TEST 43 : la confirmation de l operation solde l echeance ---'
 update public.payments set status = 'confirmed' where status = 'pending';
 
-select
-  case when amount_paid = 160000 and status = 'paid'
-    then 'OK le passage a confirme solde l echeance'
-    else 'ECHEC encaisse = ' || amount_paid || ' / ' || status end as resultat
+select public.assert_vrai('le passage a confirme solde l echeance',
+  amount_paid = 160000 and status = 'paid')
 from public.rent_calls;
 
 \echo '=== TESTS REGLEMENTS TERMINES ==='

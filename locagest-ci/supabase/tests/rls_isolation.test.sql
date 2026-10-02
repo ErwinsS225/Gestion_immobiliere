@@ -53,14 +53,10 @@ select set_config('request.jwt.claim.sub', :'konan_id', true);
 select 'Konan voit ' || count(*)::text || ' propriete(s) (attendu 1)'
 from public.properties;
 
-select
-  case when count(*) = 0 then 'OK Konan ne voit AUCUNE propriete de Yeture'
-       else 'ECHEC fuite de donnees : ' || count(*)::text end as resultat
+select public.assert_compte('Konan ne voit AUCUNE propriete de Yeture', count(*), 0::bigint)
 from public.properties where name = 'Immeuble Yeture';
 
-select
-  case when count(*) = 1 then 'OK Konan voit la sienne'
-       else 'ECHEC ' || count(*)::text end as resultat
+select public.assert_compte('Konan voit la sienne', count(*), 1::bigint)
 from public.properties where name = 'Immeuble Konan';
 rollback;
 
@@ -76,18 +72,35 @@ from public.organizations o where o.name = 'Agence Yeture';
 rollback;
 
 \echo '--- TEST 15 : le role anon n a aucun droit du tout ---'
--- anon n a meme pas le droit SELECT : le refus est anterieur a RLS.
-begin;
-set local role anon;
-select count(*) from public.properties;
-rollback;
+-- anon n a meme pas le droit SELECT : le refus est anterieur a RLS. Ce test
+-- attend une erreur, il est donc encapsule dans un bloc qui leve si la lecture
+-- reussit au lieu de laisser passer une lecture qui ne devrait pas etre possible.
+do $$
+begin
+  set local role anon;
+  perform count(*) from public.properties;
+  raise exception 'anon a pu lire les proprietes : aucun droit ne devrait etre accorde';
+exception
+  when insufficient_privilege then
+    raise notice 'OK : acces anon refuse comme attendu';
+end;
+$$;
 
 \echo '--- TEST 16 : subscription_payments inaccessible a authenticated ---'
-begin;
-set local role authenticated;
-select set_config('request.jwt.claim.sub', :'konan_id', true);
-select count(*) from public.subscription_payments;
-rollback;
+-- Cette table contient les paiements d abonnement a la plateforme : elle ne
+-- doit pas etre lisible par un utilisateur de l application. Le test attend un
+-- refus, il est donc encapsule comme le TEST 15.
+do $$
+begin
+  set local role authenticated;
+  perform set_config('request.jwt.claim.sub', current_setting('request.jwt.claim.sub'), true);
+  perform count(*) from public.subscription_payments;
+  raise exception 'subscription_payments accessible a authenticated : fuite interne';
+exception
+  when insufficient_privilege then
+    raise notice 'OK : subscription_payments inaccessible comme attendu';
+end;
+$$;
 
 \echo '--- TEST 17 : un viewer peut lire ---'
 update public.memberships set role = 'viewer'
@@ -102,13 +115,32 @@ select 'viewer lit ' || count(*)::text || ' propriete(s) (attendu 1)'
 from public.properties;
 rollback;
 
-\echo '--- TEST 18 : le viewer ne peut pas ecrire (INSERT 0 0 attendu) ---'
-begin;
-set local role authenticated;
-select set_config('request.jwt.claim.sub', :'konan_id', true);
-insert into public.properties (organization_id, name)
-select organization_id, 'Fausse ecriture' from public.properties limit 1;
-rollback;
+\echo '--- TEST 18 : le viewer ne peut pas ecrire ---'
+-- La policy doit filtrer silencieusement l insertion : sous ON_ERROR_STOP, une
+-- ecriture acceptee ferait echouer le script. Le bloc leve donc si l insertion
+-- aboutit, et n emet qu une notice si elle est refusee comme attendu.
+do $$
+declare
+  v_inserees integer;
+begin
+  set local role authenticated;
+  perform set_config('request.jwt.claim.sub', current_setting('request.jwt.claim.sub'), true);
+
+  insert into public.properties (organization_id, name)
+  select organization_id, 'Fausse ecriture' from public.properties limit 1;
+
+  get diagnostics v_inserees = row_count;
+
+  if v_inserees > 0 then
+    raise exception 'le viewer a reussi a ecrire : la policy d ecriture ne filtre pas';
+  end if;
+
+  raise notice 'OK : ecriture du viewer refusee comme attendu';
+exception
+  when insufficient_privilege then
+    raise notice 'OK : ecriture du viewer refusee par les droits';
+end;
+$$;
 
 \echo '--- TEST 19 : le viewer ne peut pas supprimer (DELETE 0 attendu) ---'
 begin;
@@ -136,11 +168,18 @@ where name = 'Agence Konan' and not exists (
   select 1 from public.properties p where p.name = 'Immeuble Konan'
 );
 
+-- La garde porte sur l immmeuble et l organisation : une recherche par simple
+-- libelle trouvait un lot homonyme cree par une autre suite, et le scenario
+-- Konan n obtenait alors aucun bail, faisant echouer les assertions d isolation
+-- pour une raison qui n avait rien a voir avec RLS.
 insert into public.units (organization_id, property_id, label, unit_type_v2, category)
 select p.organization_id, p.id, 'Apt 1', 'apartment_f2', 'residential'
 from public.properties p
 where p.name = 'Immeuble Konan'
-  and not exists (select 1 from public.units u where u.label = 'Apt 1');
+  and not exists (
+    select 1 from public.units u
+    where u.property_id = p.id and u.label = 'Apt 1'
+  );
 
 insert into public.tenants (organization_id, full_name, phone)
 select id, 'M. Kouassi', '+225 05 22 22 22 22'
@@ -181,14 +220,15 @@ from public.inspection_reports r;
 
 select (select id from auth.users where email = 'konan@test.ci')::text as konan_id \gset
 
-\echo '--- TEST 20 : Konan voit son inventaire ---'
+\echo '--- TEST 20 : Konan voit son objet d etat des lieux ---'
+-- La lecture porte sur inspection_items, table dans laquelle le scenario vient
+-- d ecrire. Interroger inventory_items ne prouverait rien : aucune ligne n y
+-- existe et le compte serait de zero pour une raison sans rapport avec RLS.
 begin;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', :'konan_id', true);
-select
-  case when count(*) = 1 then 'OK Konan voit son objet'
-       else 'ECHEC vu ' || count(*)::text end as resultat
-from public.inventory_items;
+select public.assert_compte('Konan voit son objet', count(*), 1::bigint)
+from public.inspection_items;
 rollback;
 
 \echo '--- TEST 21 : Konan ne voit pas les objets d une autre agence ---'
@@ -205,7 +245,10 @@ insert into public.units (organization_id, property_id, label, unit_type_v2, cat
 select p.organization_id, p.id, 'Apt 2', 'apartment_f2', 'residential'
 from public.properties p
 where p.name = 'Immeuble Yeture'
-  and not exists (select 1 from public.units u where u.label = 'Apt 2');
+  and not exists (
+    select 1 from public.units u
+    where u.property_id = p.id and u.label = 'Apt 2'
+  );
 
 insert into public.leases (organization_id, unit_id, tenant_id, start_date, rent_amount)
 select p.organization_id, u.id, t.id, date '2026-01-01', 120000
@@ -225,9 +268,7 @@ where l.organization_id = (select id from public.organizations where name = 'Age
 begin;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', :'konan_id', true);
-select
-  case when count(*) = 1 then 'OK Konan ne voit que son objet'
-       else 'ECHEC fuite : ' || count(*)::text end as resultat
+select public.assert_compte('Konan ne voit que son objet', count(*), 1::bigint)
 from public.inventory_items;
 rollback;
 
@@ -265,27 +306,40 @@ limit 1;
 rollback;
 
 \echo '--- TEST 25 : le catalogue de son agence s ecrit ---'
+-- L objet est retire avant creation : le fichier doit pouvoir etre relance sur
+-- une base deja peuplee, sans quoi la contrainte d unicite
+-- inventory_catalog_own_key echouerait sur le rejeu.
+delete from public.inventory_catalog where name = 'Machine a popcorn';
+
 insert into public.inventory_catalog (organization_id, category, name)
 select organization_id, 'Cuisine', 'Machine a popcorn'
 from public.memberships
 where user_id = (select id from auth.users where email = 'konan@test.ci')
 limit 1;
 
-select
-  case when count(*) = 1 then 'OK objet propre enregistre'
-       else 'ECHEC ' || count(*)::text end as resultat
+select public.assert_compte('objet propre enregistre', count(*), 1::bigint)
 from public.inventory_catalog where name = 'Machine a popcorn';
 
 \echo '--- TEST 26 : rejeu du catalogue sans doublon ---'
-insert into public.inventory_catalog (organization_id, category, name)
-select organization_id, 'Cuisine', 'Machine a popcorn'
-from public.memberships
-where user_id = (select id from auth.users where email = 'konan@test.ci')
-limit 1;
+-- Ce test verifie que le trigger anti-doublon rejette une reinsertion. La
+-- violation attendue est donc capturee : sans cela le fichier s interromprait
+-- exactement sur le comportement qu il cherche a observer.
+do $$
+begin
+  insert into public.inventory_catalog (organization_id, category, name)
+  select organization_id, 'Cuisine', 'Machine a popcorn'
+  from public.memberships
+  where user_id = (select id from auth.users where email = 'konan@test.ci')
+  limit 1;
 
-select
-  case when count(*) = 1 then 'OK pas de doublon'
-       else 'ECHEC ' || count(*)::text || ' lignes' end as resultat
+  raise exception 'le catalogue a accepte un doublon : le trigger anti-doublon ne fonctionne pas';
+exception
+  when unique_violation then
+    raise notice 'OK : doublon refuse par le catalogue';
+end;
+$$;
+
+select public.assert_compte('pas de doublon au rejeu du catalogue', count(*), 1::bigint)
 from public.inventory_catalog where name = 'Machine a popcorn';
 
 \echo '=== TESTS TERMINES ==='

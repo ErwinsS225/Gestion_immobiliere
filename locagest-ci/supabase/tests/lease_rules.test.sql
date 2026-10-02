@@ -49,21 +49,32 @@ select u.organization_id, u.id, s.tenant_id, date '2026-01-01', 150000, 300000
 from public.units u, scenario s
 where u.property_id = s.property_id and u.label = 'Apt 1';
 
-select
-  case when count(*) = 1 then 'OK depot au plafond accepte'
-       else 'ECHEC ' || count(*)::text end as resultat
+select public.assert_compte('depot au plafond accepte', count(*), 1::bigint)
 from public.leases where deposit_amount = 300000;
 
 \echo '--- TEST 28 : depot au dela de deux mois (art. 416) doit etre refuse ---'
 -- 300 001 depasse de un franc le plafond : la contrainte doit rejeter.
-insert into public.leases (organization_id, unit_id, tenant_id, start_date, rent_amount, deposit_amount)
-select u.organization_id, u.id, s.tenant_id, date '2026-01-01', 150000, 300001
-from public.units u, scenario s
-where u.property_id = s.property_id and u.label = 'Apt 2';
+--
+-- Ce test attend un echec. L insert est donc encapsule dans un bloc qui
+-- intercepte l exception : laisser remonter l erreur ferait echouer le script
+-- sur le comportement meme que l on veut verifier, et laisser passer
+-- silencieusement ne prouverait rien.
+do $$
+begin
+  insert into public.leases
+    (organization_id, unit_id, tenant_id, start_date, rent_amount, deposit_amount)
+  select u.organization_id, u.id, s.tenant_id, date '2026-01-01', 150000, 300001
+  from public.units u, scenario s
+  where u.property_id = s.property_id and u.label = 'Apt 2';
 
-select
-  case when count(*) = 0 then 'OK aucun bail au dela du plafond'
-       else 'ECHEC ' || count(*)::text || ' bail(s) accepte(s)' end as resultat
+  raise exception 'le depot de 300 001 aurait ete accepte : le plafond legal ne fonctionne pas';
+exception
+  when check_violation then
+    raise notice 'OK : plafond du depot correctement rejete';
+end;
+$$;
+
+select public.assert_compte('aucun bail au dela du plafond', count(*), 0::bigint)
 from public.leases where deposit_amount > 300000;
 
 \echo '--- TEST 29 : le plafond porte sur le loyer seul, pas sur les charges ---'
@@ -73,34 +84,47 @@ select u.organization_id, u.id, s.tenant_id, date '2026-01-01', 100000, 400000, 
 from public.units u, scenario s
 where u.property_id = s.property_id and u.label = 'Apt 3';
 
-select
-  case when count(*) = 1 then 'OK charges elevees ne relevent pas le plafond'
-       else 'ECHEC ' || count(*)::text end as resultat
+select public.assert_compte('charges elevees ne relevent pas le plafond', count(*), 1::bigint)
 from public.leases where rent_amount = 100000 and charges_amount = 400000;
 
 \echo '--- TEST 30 : un mode de prorata inconnu est refuse ---'
--- L insertion doit echouer sur la contrainte. Le fichier le verifie en comptant
--- ce qui a ete enregistre, pour que le resultat soit explicite et non deduit
--- d une absence de message d erreur.
-insert into public.leases (organization_id, unit_id, tenant_id, start_date, rent_amount, prorata_mode)
-select u.organization_id, u.id, s.tenant_id, date '2026-01-01', 100000, 'prorata_inventé'
-from public.units u, scenario s
-where u.property_id = s.property_id and u.label = 'Apt 4';
+-- Bloc negatif : l insertion doit echouer sur la contrainte. Si elle reussit,
+-- le raise exception signale le defaut au lieu de laisser un silence.
+do $$
+begin
+  insert into public.leases
+    (organization_id, unit_id, tenant_id, start_date, rent_amount, prorata_mode)
+  select u.organization_id, u.id, s.tenant_id, date '2026-01-01', 100000, 'prorata_inventé'
+  from public.units u, scenario s
+  where u.property_id = s.property_id and u.label = 'Apt 4';
 
-select
-  case when count(*) = 0 then 'OK mode inconnu rejete'
-       else 'ECHEC ' || count(*)::text || ' accepte(s)' end as resultat
+  raise exception 'mode de prorata inconnu accepte : la contrainte ne fonctionne pas';
+exception
+  when check_violation then
+    raise notice 'OK : mode de prorata inconnu rejete';
+end;
+$$;
+
+select public.assert_compte('mode de prorata inconnu rejete', count(*), 0::bigint)
 from public.leases where prorata_mode = 'prorata_inventé';
 
 \echo '--- TEST 31 : une base de prorata inconnue est refusee ---'
-insert into public.leases (organization_id, unit_id, tenant_id, start_date, rent_amount, prorata_basis)
-select u.organization_id, u.id, s.tenant_id, date '2026-01-01', 100000, 'annee_bissextile'
-from public.units u, scenario s
-where u.property_id = s.property_id and u.label = 'Apt 5';
+do $$
+begin
+  insert into public.leases
+    (organization_id, unit_id, tenant_id, start_date, rent_amount, prorata_basis)
+  select u.organization_id, u.id, s.tenant_id, date '2026-01-01', 100000, 'annee_bissextile'
+  from public.units u, scenario s
+  where u.property_id = s.property_id and u.label = 'Apt 5';
 
-select
-  case when count(*) = 0 then 'OK base inconnue rejetee'
-       else 'ECHEC ' || count(*)::text || ' acceptee(s)' end as resultat
+  raise exception 'base de prorata inconnue acceptee : la contrainte ne fonctionne pas';
+exception
+  when check_violation then
+    raise notice 'OK : base de prorata inconnue rejetee';
+end;
+$$;
+
+select public.assert_compte('base de prorata inconnue rejetee', count(*), 0::bigint)
 from public.leases where prorata_basis = 'annee_bissextile';
 
 \echo '--- TEST 32 : les trois modes et les deux bases sont acceptes ---'
@@ -131,9 +155,7 @@ insert into public.leases (organization_id, unit_id, tenant_id, start_date, rent
 select u.organization_id, u.id, s.tenant_id, date '2026-01-01', 100000, 'full_month', 'thirty_day_month'
 from public.units u, scenario s where u.property_id = s.property_id and u.label = 'Apt 11';
 
-select
-  case when count(*) = 6 then 'OK 6 combinaisons de prorata acceptees'
-       else 'ECHEC ' || count(*)::text end as resultat
+select public.assert_compte('six combinaisons de prorata acceptees', count(*), 6::bigint)
 from public.leases
 where rent_amount = 100000
   and prorata_mode in ('days_remaining', 'days_remaining_plus_one', 'full_month')
@@ -141,29 +163,35 @@ where rent_amount = 100000
   and deposit_amount = 0;
 
 \echo '--- TEST 33 : la revision se deverrouille trois ans apres le bail (art. 455) ---'
-select
-  case when revision_allowed_at = date '2029-01-01' then 'OK revision bloquee jusqu au 01/01/2029'
-       else 'ECHEC ' || coalesce(revision_allowed_at::text, 'NULL') end as resultat
+select public.assert_vrai('revision bloquee jusqu au 01/01/2029',
+  revision_allowed_at = date '2029-01-01')
 from public.leases
 where deposit_amount = 300000;
 
 \echo '--- TEST 34 : la date suit un changement de date de debut ---'
 update public.leases set start_date = date '2026-06-15' where deposit_amount = 300000;
 
-select
-  case when revision_allowed_at = date '2029-06-15' then 'OK date recalculee apres changement'
-       else 'ECHEC ' || coalesce(revision_allowed_at::text, 'NULL') end as resultat
+select public.assert_vrai('date de revision recalculee apres changement',
+  revision_allowed_at = date '2029-06-15')
 from public.leases
 where deposit_amount = 300000;
 
 \echo '--- TEST 35 : un taux de revision hors bornes est refuse ---'
-update public.leases set revision_rate = 35 where deposit_amount = 300000;
+do $$
+begin
+  update public.leases set revision_rate = 35 where deposit_amount = 300000;
+  -- Le libelle est passe en parametre : un % dans un message de RAISE est
+  -- sinon interprete comme un jeton de substitution.
+  raise exception '%', 'taux de revision de 35 %% accepte : la contrainte ne fonctionne pas';
+exception
+  when check_violation then
+    raise notice 'OK : taux de revision hors bornes rejete';
+end;
+$$;
 
 update public.leases set revision_rate = 5 where deposit_amount = 300000;
 
-select
-  case when revision_rate = 5 then 'OK taux de 5 % accepte'
-       else 'ECHEC' end as resultat
+select public.assert_vrai('taux de revision de 5 % accepte', revision_rate = 5)
 from public.leases
 where deposit_amount = 300000;
 
