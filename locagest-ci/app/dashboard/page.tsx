@@ -168,11 +168,10 @@ export default async function DashboardPage() {
                         <Users size={17} aria-hidden="true" />
                         <span>Locataires</span>
                     </Link>
-                    <span className="dashboard-nav-item disabled" aria-disabled="true">
+                    <Link className="dashboard-nav-item" href="/leases">
                         <DoorOpen size={17} aria-hidden="true" />
                         <span>Locations</span>
-                        <small>Bientôt</small>
-                    </span>
+                    </Link>
                 </nav>
 
                 <div className="dashboard-sidebar-bottom">
