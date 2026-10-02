@@ -164,16 +164,15 @@ export default async function DashboardPage() {
                         <House size={17} aria-hidden="true" />
                         <span>Biens</span>
                     </Link>
-                    {[
-                        { label: "Locations", icon: DoorOpen },
-                        { label: "Locataires", icon: Users },
-                    ].map(({ label, icon: Icon }) => (
-                        <span className="dashboard-nav-item disabled" aria-disabled="true" key={label}>
-                            <Icon size={17} aria-hidden="true" />
-                            <span>{label}</span>
-                            <small>Bientôt</small>
-                        </span>
-                    ))}
+                    <Link className="dashboard-nav-item" href="/tenants">
+                        <Users size={17} aria-hidden="true" />
+                        <span>Locataires</span>
+                    </Link>
+                    <span className="dashboard-nav-item disabled" aria-disabled="true">
+                        <DoorOpen size={17} aria-hidden="true" />
+                        <span>Locations</span>
+                        <small>Bientôt</small>
+                    </span>
                 </nav>
 
                 <div className="dashboard-sidebar-bottom">

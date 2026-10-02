@@ -2300,6 +2300,18 @@ a {
   font-size: 12px;
 }
 
+/* Actions d un locataire : appel et WhatsApp restent côte à côte, l'un fixe. */
+.tenant-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.tenant-actions .icon-button {
+  text-decoration: none;
+}
+
 .property-no-units {
   display: grid;
   justify-items: start;
