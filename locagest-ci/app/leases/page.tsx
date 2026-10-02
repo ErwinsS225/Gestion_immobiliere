@@ -190,36 +190,44 @@ export default async function LeasesPage() {
               <ul className="inventory-list">
                 {leases.map((lease) => (
                   <li key={lease.id} className="inventory-row">
-                    <div className="inventory-row-main">
-                      <strong>
-                        {lease.unit?.property?.name
-                          ? `${lease.unit.property.name} — `
-                          : ""}
-                        {lease.unit?.label ?? "Lot supprimé"}
-                      </strong>
-                      <small className="inventory-note">
-                        {lease.tenant?.full_name ?? "Locataire supprimé"}
-                        {lease.tenant?.phone ? ` · ${lease.tenant.phone}` : ""}
-                      </small>
-                      <small className="inventory-note">
-                        Depuis le {formatDateFr(lease.start_date)}
-                        {lease.end_date ? ` au ${formatDateFr(lease.end_date)}` : ""} ·
-                        échéance le {lease.payment_day}
-                      </small>
-                    </div>
-                    <div className="inventory-row-end">
-                      <span
-                        className={`condition-chip ${
-                          lease.status === "active" ? "condition-success" : "condition-neutral"
-                        }`}
-                      >
-                        {lease.status === "active" ? "Actif" : "Résilié"}
-                      </span>
-                      <strong className="unit-price">
-                        {formatFCFA(Number(lease.rent_amount) + Number(lease.charges_amount))}
-                        <span> / mois</span>
-                      </strong>
-                    </div>
+                    <Link
+                      href={`/leases/${lease.id}`}
+                      className="inventory-row-link"
+                      aria-label={`Ouvrir le bail de ${lease.tenant?.full_name ?? "ce locataire"}`}
+                    >
+                      <div className="inventory-row-main">
+                        <strong>
+                          {lease.unit?.property?.name
+                            ? `${lease.unit.property.name} — `
+                            : ""}
+                          {lease.unit?.label ?? "Lot supprimé"}
+                        </strong>
+                        <small className="inventory-note">
+                          {lease.tenant?.full_name ?? "Locataire supprimé"}
+                          {lease.tenant?.phone ? ` · ${lease.tenant.phone}` : ""}
+                        </small>
+                        <small className="inventory-note">
+                          Depuis le {formatDateFr(lease.start_date)}
+                          {lease.end_date ? ` au ${formatDateFr(lease.end_date)}` : ""} ·
+                          échéance le {lease.payment_day}
+                        </small>
+                      </div>
+                      <div className="inventory-row-end">
+                        <span
+                          className={`condition-chip ${
+                            lease.status === "active"
+                              ? "condition-success"
+                              : "condition-neutral"
+                          }`}
+                        >
+                          {lease.status === "active" ? "Actif" : "Résilié"}
+                        </span>
+                        <strong className="unit-price">
+                          {formatFCFA(Number(lease.rent_amount) + Number(lease.charges_amount))}
+                          <span> / mois</span>
+                        </strong>
+                      </div>
+                    </Link>
                   </li>
                 ))}
               </ul>

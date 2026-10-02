@@ -2432,6 +2432,128 @@ a {
   font-size: 11px;
 }
 
+/* ---------------------------------------------------------------------------
+   Fiche du bail
+   --------------------------------------------------------------------------- */
+
+.lease-identity {
+  display: grid;
+  gap: 16px;
+}
+
+.lease-identity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.lease-identity-grid > div {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+
+.lease-identity-grid strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lease-identity-name {
+  font-size: 15px !important;
+}
+
+.lease-identity-phone {
+  color: #748078;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lease-identity-foot {
+  color: #748078;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Repartition des montants : quatre colonnes egales, chiffres alignes pour que
+   l agent compare les lignes sans les relire. */
+.lease-identity-money {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #e4eae4;
+}
+
+.lease-identity-money > div {
+  display: grid;
+  gap: 3px;
+}
+
+.lease-identity-money span {
+  color: #748078;
+  font-size: 11px;
+}
+
+.lease-identity-money strong {
+  color: var(--forest);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Totaux de suivi du bail, rappeles avant la liste des echeances. */
+.lease-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #dbe4d8;
+  border-radius: 11px;
+  background: #f2f7f2;
+}
+
+.lease-totals > div {
+  display: grid;
+  gap: 3px;
+}
+
+.lease-totals span {
+  color: #5d6b60;
+  font-size: 11px;
+}
+
+.lease-totals strong {
+  color: var(--forest);
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-row-main strong svg {
+  vertical-align: -2px;
+  color: #748078;
+}
+
+/* Ligne de liste cliquable : le lien occupe toute la ligne, la cible reste
+   assez grande pour un doigt. */
+.inventory-row-link {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.inventory-row-link:hover .inventory-row-main strong,
+.inventory-row-link:focus-visible .inventory-row-main strong {
+  color: var(--forest);
+  text-decoration: underline;
+}
+
 /* Colonnes finales d une ligne de liste : montant puis statut. */
 .inventory-row-end {
   display: grid;
