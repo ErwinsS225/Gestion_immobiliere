@@ -79,6 +79,35 @@ a {
       rgb(255 255 255 / 3.5%) 68px
     );
   color: #fff;
+
+  /* Position du pointeur, ecrite par le composant sur chaque mouvement.
+     La valeur par defaut place le halo hors du panneau avant le premier
+     mouvement : sans elle, il apparaîtrait au coin superieur gauche. */
+  --cursor-x: -400px;
+  --cursor-y: -400px;
+}
+
+/* Halo qui suit le pointeur avec du retard.
+   Le 240ms de transition fait l effet de trainee ; sans transition le halo
+   serait colle au curseur et ne raconterait rien. */
+.brand-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 460px;
+  height: 460px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(215 243 106 / 13%) 0%,
+    rgb(215 243 106 / 5%) 38%,
+    transparent 68%
+  );
+  transform: translate3d(calc(var(--cursor-x) - 230px), calc(var(--cursor-y) - 230px), 0);
+  pointer-events: none;
+  will-change: transform;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .brand-panel::after {
@@ -1441,6 +1470,13 @@ a {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Le halo doit disparaitre completement, pas seulement suivre sans retard :
+     rester immobile au dernier point ou se trouvait la souris laisse une
+     tache claire au milieu du panneau. */
+  .brand-cursor {
+    display: none;
   }
 }
 

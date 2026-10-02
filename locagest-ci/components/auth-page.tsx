@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft, Building2, CircleHelp } from "lucide-react";
 import { AuthForm, type AuthMode } from "@/components/auth-form";
@@ -47,6 +50,58 @@ function BrandMark() {
     );
 }
 
+/**
+ * Suit le pointeur sur le panneau de marque et anime un halo qui le suit avec du
+ * retard, plus une vignette qui accentue lumiere la ou l on regarde.
+ *
+ * Le halo se deplace en CSS : la position est mise a jour dans deux variables
+ * depuis une seule frame, et la transition fait le retard. Aucun rendu React
+ * n est declenche par le mouvement de la souris, sinon chaque pixel parcouru
+ * provoquerait un rendu du formulaire de connexion a cote.
+ *
+ * L effet est purement decoratif : il est neutralise si l utilisateur prefere
+ * moins d animations, et absent du HTML servi au robot d indexation.
+ */
+function useBrandCursor() {
+    const ref = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const noMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        if (noMotion.matches) return;
+
+        let frame = 0;
+        let x = 0;
+        let y = 0;
+
+        const onMove = (event: PointerEvent) => {
+            const panel = ref.current;
+            if (!panel) return;
+
+            const rect = panel.getBoundingClientRect();
+            x = event.clientX - rect.left;
+            y = event.clientY - rect.top;
+
+            if (frame) return;
+            frame = window.requestAnimationFrame(() => {
+                frame = 0;
+                panel.style.setProperty("--cursor-x", `${x}px`);
+                panel.style.setProperty("--cursor-y", `${y}px`);
+            });
+        };
+
+        const panel = ref.current;
+        if (!panel) return;
+        panel.addEventListener("pointermove", onMove);
+
+        return () => {
+            if (frame) window.cancelAnimationFrame(frame);
+            panel.removeEventListener("pointermove", onMove);
+        };
+    }, []);
+
+    return ref;
+}
+
 export function AuthPage({
     mode,
     initialError,
@@ -55,51 +110,55 @@ export function AuthPage({
     initialError?: string;
 }) {
     const copy = pageCopy[mode];
+    const panelRef = useBrandCursor();
 
     return (
         <main className="auth-shell">
-            <aside className="brand-panel" aria-label="Locagest CI">
+            <aside className="brand-panel" aria-label="Locagest CI" ref={panelRef}>
+                <span className="brand-cursor" aria-hidden="true" />
                 <Link className="brand-lockup" href="/login" aria-label="Locagest CI, accueil">
                     <BrandMark />
                 </Link>
                 <div className="brand-message">
-                    <span className="brand-eyebrow">Gestion locative, maîtrisée</span>
+                    <span className="brand-eyebrow">Chaque franc qui rentre, chaque relance qui part</span>
                     <h1>
-                        Vos loyers.
+                        Ton argent dort
                         <br />
-                        <em>Sans angle mort.</em>
+                        <em>quelque part.</em>
                     </h1>
                     <p>
-                        Le suivi des échéances, des paiements et des relances de votre agence,
-                        réuni au même endroit.
+                        Tu gères 30 lots. Tu connais ceux qui payent, et ceux qui
+                        « paieront la semaine prochaine » depuis six mois. Locagest voit
+                        chaque échéance, relance chaque locataire sur WhatsApp, et te
+                        dit où en est ton argent, sans que tu aies à le réclamer.
                     </p>
                 </div>
                 <div className="ledger-preview" aria-label="Aperçu de suivi locatif">
                     <div className="ledger-head">
-                        <span className="ledger-title">Suivi du mois</span>
+                        <span className="ledger-title">Ce mois-ci, en un coup d&apos;œil</span>
                         <span className="ledger-period">Exemple</span>
                     </div>
                     <div className="ledger-row">
-                        <span>Échéances enregistrées</span>
+                        <span>Échéances générées</span>
                         <span className="ledger-state">
-                            <i className="ledger-dot" /> Suivi
+                            <i className="ledger-dot" /> Automatique
                         </span>
                     </div>
                     <div className="ledger-row">
-                        <span>Paiements reçus</span>
+                        <span>Paiements encaissés</span>
                         <span className="ledger-state">
                             <i className="ledger-dot" /> Pointés
                         </span>
                     </div>
                     <div className="ledger-row">
-                        <span>Retards à traiter</span>
+                        <span>Locataires en retard</span>
                         <span className="ledger-state">
-                            <i className="ledger-dot late" /> À relancer
+                            <i className="ledger-dot late" /> WhatsApp envoyé
                         </span>
                     </div>
                 </div>
                 <p className="brand-footnote">
-                    Pensé pour les agences immobilières en Côte d’Ivoire.
+                    Conçu pour les agences qui vivent de leurs impayés. Côte d’Ivoire.
                 </p>
             </aside>
 
