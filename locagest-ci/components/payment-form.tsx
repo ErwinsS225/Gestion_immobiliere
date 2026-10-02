@@ -15,6 +15,7 @@ export interface RentCallForPayment {
   id: string;
   period_year: number;
   period_month: number;
+  due_date: string;
   total_amount: number;
   amount_paid: number;
   status: string;

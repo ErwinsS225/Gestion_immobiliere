@@ -87,7 +87,8 @@ export default async function LeaseDetailPage({
     tenant: { id: string; full_name: string; phone: string; whatsapp: string | null } | null;
   };
 
-  const [echeancesResult, inventaireResult, catalogueResult, rapportsResult] = await Promise.all([
+  const [echeancesResult, inventaireResult, catalogueResult, rapportsResult, organisationResult] =
+    await Promise.all([
     supabase
       .from("rent_calls")
       .select(
@@ -112,7 +113,12 @@ export default async function LeaseDetailPage({
       .select("id, type, status, inspection_date")
       .eq("lease_id", bail.id)
       .order("inspection_date", { ascending: false }),
+    // Le nom de l'agence signe le message de relance : il provient de la même
+    // organisation que le bail, jamais d'une saisie libre.
+    supabase.from("organizations").select("name").eq("id", organizationId).maybeSingle(),
   ]);
+
+  const nomAgence = (organisationResult.data?.name as string | undefined) ?? null;
 
   const echeances = (echeancesResult.data ?? []) as Array<{
     id: string;
@@ -245,7 +251,14 @@ export default async function LeaseDetailPage({
           </div>
         </section>
 
-        <RentCallTracker rentCalls={echeances} />
+        <RentCallTracker
+          rentCalls={echeances}
+          relance={{
+            nomLocataire: bail.tenant?.full_name ?? null,
+            whatsappLocataire: bail.tenant?.whatsapp ?? bail.tenant?.phone ?? null,
+            nomAgence,
+          }}
+        />
 
         {rapports.length > 0 ? (
           <section className="properties-panel property-overview-panel">
