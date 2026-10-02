@@ -122,15 +122,15 @@ export function AuthPage({
                 <div className="brand-message">
                     <span className="brand-eyebrow">Chaque franc qui rentre, chaque relance qui part</span>
                     <h1>
-                        Ton argent dort
+                        Votre argent dort
                         <br />
                         <em>quelque part.</em>
                     </h1>
                     <p>
-                        Tu gères 30 lots. Tu connais ceux qui payent, et ceux qui
+                        Vous gérez 30 lots. Vous connaissez ceux qui payent, et ceux qui
                         « paieront la semaine prochaine » depuis six mois. Locagest voit
-                        chaque échéance, relance chaque locataire sur WhatsApp, et te
-                        dit où en est ton argent, sans que tu aies à le réclamer.
+                        chaque échéance, relance chaque locataire sur WhatsApp, et vous dit
+                        où en est votre argent, sans que vous ayez à le réclamer.
                     </p>
                 </div>
                 <div className="ledger-preview" aria-label="Aperçu de suivi locatif">
