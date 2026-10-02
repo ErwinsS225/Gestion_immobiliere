@@ -36,19 +36,28 @@ PIED = """
 
 -- ===========================================================================
 -- VERIFICATION : a lancer apres la migration
--- Resultat attendu :  11 | 33 | 14   puis   47 | 1
--- soit 11 tables, 33 policies, 14 triggers, 47 types de bien, 1 contrainte
--- de correspondance categorie / type.
+-- Resultat attendu :  15 | 49 | 21 | 77 | 3 | 1 | 1 | 4
+-- soit 15 tables, 49 policies, 21 triggers, 77 objets au catalogue,
+-- 3 enums d etat des lieux, 1 type de bien detaille, 1 contrainte de
+-- correspondance, et 4 colonnes de reglage du bail (prorata_mode,
+-- prorata_basis, revision_rate, revision_allowed_at).
 -- ===========================================================================
 select
   (select count(*) from pg_tables where schemaname = 'public')
   || ' | ' || (select count(*) from pg_policies where schemaname = 'public')
   || ' | ' || (select count(*) from information_schema.triggers
                 where trigger_schema = 'public')
+  || ' | ' || (select count(*) from public.inventory_catalog
+                where organization_id is null)
   || ' | ' || (select count(*) from pg_type
-                where typname = 'unit_type_v2')
+                where typname in ('item_condition', 'inspection_type', 'inspection_status'))
+  || ' | ' || (select count(*) from pg_type where typname = 'unit_type_v2')
   || ' | ' || (select count(*) from pg_constraint
                 where conname = 'units_type_matches_category')
+  || ' | ' || (select count(*) from information_schema.columns
+                where table_schema = 'public' and table_name = 'leases'
+                  and column_name in ('prorata_mode', 'prorata_basis',
+                                      'revision_rate', 'revision_allowed_at'))
   as "verif";
 """
 
