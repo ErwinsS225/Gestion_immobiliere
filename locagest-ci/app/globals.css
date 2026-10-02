@@ -171,13 +171,19 @@ a {
   text-transform: uppercase;
 }
 
+/* L angle et le titre forment une seule phrase : l angle en vert clair
+   sur fond vert profond, le titre en blanc, dans la meme graisse. */
 .brand-message h1 {
   max-width: 470px;
   margin: 20px 0 15px;
+  /* Les titres qui rotent sont plus longs que l ancien titre court : le
+     clamp est abaisse pour qu une phrase comme « L'excellence operationnelle
+     pour votre agence » tienne sur trois lignes sans deborder. */
   font:
-    700 clamp(40px, 4.6vw, 62px)/1.06 Manrope,
+    700 clamp(32px, 3.5vw, 46px)/1.1 Manrope,
     sans-serif;
   letter-spacing: 0;
+  color: #fff;
 }
 
 .brand-message h1 em {

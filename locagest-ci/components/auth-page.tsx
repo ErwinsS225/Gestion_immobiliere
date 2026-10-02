@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft, Building2, CircleHelp } from "lucide-react";
 import { AuthForm, type AuthMode } from "@/components/auth-form";
+import { RotatingPitch } from "@/components/rotating-pitch";
 
 const pageCopy: Record<
     AuthMode,
@@ -120,18 +121,19 @@ export function AuthPage({
                     <BrandMark />
                 </Link>
                 <div className="brand-message">
-                    <span className="brand-eyebrow">Chaque franc qui rentre, chaque relance qui part</span>
-                    <h1>
-                        Votre argent dort
-                        <br />
-                        <em>quelque part.</em>
-                    </h1>
-                    <p>
-                        Vous gérez 30 lots. Vous connaissez ceux qui payent, et ceux qui
-                        « paieront la semaine prochaine » depuis six mois. Locagest voit
-                        chaque échéance, relance chaque locataire sur WhatsApp, et vous dit
-                        où en est votre argent, sans que vous ayez à le réclamer.
-                    </p>
+                    {/*
+                      La zone est masquee aux lecteurs d ecran : elle change toute
+                      seule, et une annonce automatique a chaque rotation
+                      interromprait la lecture du formulaire juste a cote. Le
+                      contenu reste dans le HTML pour l indexation.
+                    */}
+                    <div aria-hidden="true">
+                        <RotatingPitch />
+                    </div>
+                    <span className="visually-hidden">
+                        Sérénité opérationnelle, efficacité et gain de temps, excellence et
+                        image de marque.
+                    </span>
                 </div>
                 <div className="ledger-preview" aria-label="Aperçu de suivi locatif">
                     <div className="ledger-head">
