@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  leaseContext,
+  requireOrganization,
   leaseNotFound,
   resolveLease,
   serviceUnavailable,
@@ -19,7 +19,7 @@ export async function DELETE(
 ) {
   try {
     const { id: leaseId, itemId } = await params;
-    const context = await leaseContext(true);
+    const context = await requireOrganization(true);
     if (context.response) return context.response;
 
     const { data: lease, error: leaseError } = await resolveLease(

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  leaseContext,
+  requireOrganization,
   leaseNotFound,
   readJson,
   resolveLease,
@@ -26,7 +26,7 @@ export async function GET(
 ) {
   try {
     const { id: leaseId } = await params;
-    const context = await leaseContext(false);
+    const context = await requireOrganization(false);
     if (context.response) return context.response;
 
     const { data: lease, error: leaseError } = await resolveLease(
@@ -64,7 +64,7 @@ export async function POST(
 ) {
   try {
     const { id: leaseId } = await params;
-    const context = await leaseContext(true);
+    const context = await requireOrganization(true);
     if (context.response) return context.response;
 
     const parsed = inspectionReportSchema.safeParse(await readJson(request));
