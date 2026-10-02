@@ -90,6 +90,44 @@ versionnées, qui restent la source de vérité :
 python3 scripts/build_migration_script.py
 ```
 
+## Tâche quotidienne : génération des échéances
+
+Une route crée les échéances du mois pour chaque bail actif, puis marque en retard
+celles qui sont échues depuis plus de cinq jours.
+
+`supabase/MIGRATION_2_A_COLLER.sql` contient déjà les deux fonctions SQL,
+`generate_monthly_rent_calls(année, mois)` et `mark_overdue_rent_calls()`. La route
+`app/api/cron/loyer-mensuel` les appelle dans cet ordre : une échéance créée
+aujourd'hui ne doit pas être traitée dans la foulée par le repérage des retards.
+
+**Protection.** La route refuse tout appel sans `Authorization: Bearer <CRON_SECRET>`,
+comparé à temps constant. Sans secret configuré, elle répond 500 plutôt que de
+tourner ouverte.
+
+**Client de service.** Ces fonctions franchissent les politiques RLS, ce qui est
+voulu : elles doivent toucher toutes les agences. `lib/supabase/service.ts` est le
+seul endroit où la clé de service est lue, et le paquet `server-only` fait échouer
+la compilation si un composant l'importe.
+
+**En production (Vercel).** `vercel.json` planifie la route à 6 h 17 UTC, soit
+8 h 17 à Abidjan : le moment où l'agent ouvre son logiciel. Régler `CRON_SECRET` et
+`SUPABASE_SERVICE_ROLE_KEY` dans les variables du projet Vercel.
+
+**En local.** Lancer la commande ci-dessous à la place :
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/loyer-mensuel
+```
+
+La réponse indique le nombre d'échéances créées et le nombre marquées en retard :
+
+```json
+{ "periode": "2026-10", "echeancesCreees": 3, "echeancesMarqueesEnRetard": 1 }
+```
+
+Le calcul se fait en heure UTC, cohérent avec le stockage des dates en `date`. Un
+bail demarrant le 31 octobre ne sera facturé qu'à partir de sa date d'échéance.
+
 ## Typologie des biens
 
 `lib/property-types.ts` définit 7 catégories et 47 types de biens, de `studio` à
